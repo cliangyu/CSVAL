@@ -1,4 +1,4 @@
-faiss-gpu==1.6.1
+faiss-gpu
 future
 matplotlib
 mmcls
