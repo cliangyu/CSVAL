@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 
+from mmselfsup.utils import concat_all_gather
 from ..builder import ALGORITHMS, build_backbone, build_head, build_neck
 from ..utils import GatherLayer
 from .base import BaseModel
@@ -83,7 +84,13 @@ class SimCLR(BaseModel):
         # remove diagonal, (2N)x(2N-1)
         s = torch.masked_select(s, mask == 1).reshape(s.size(0), -1)
         positive = s[pos_ind].unsqueeze(1)  # (2N)x1
+
+        self.training_dynamics = dict(
+            idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
+            cossim=torch.mean(s[pos_ind].reshape((-1, 2)),
+                              1).cpu().detach().numpy())
+
         # select negative, (2N)x(2N-2)
         negative = torch.masked_select(s, neg_mask == 1).reshape(s.size(0), -1)
         losses = self.head(positive, negative)
-        return losses
+        return dict(loss=losses)

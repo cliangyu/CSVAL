@@ -62,3 +62,10 @@ data = dict(
         pipelines=[train_pipeline1, train_pipeline2],
         prefetch=prefetch,
     ))
+model = dict(
+    backbone=dict(
+        type='VisionTransformer',
+        arch='mocov3-small',  # embed_dim = 384
+        img_size=28,
+        patch_size=4,
+        stop_grad_conv1=True), )

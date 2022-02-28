@@ -4,7 +4,9 @@ matplotlib
 mmcls
 numpy
 packaging
+pandas
 scipy
+seaborn
 six
 sklearn
 tensorboard

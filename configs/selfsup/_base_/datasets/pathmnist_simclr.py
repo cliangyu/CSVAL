@@ -1,7 +1,7 @@
 # dataset settings
 data_source = 'PathMNIST'
 dataset_type = 'MultiViewDataset'
-img_norm_cfg = dict(mean=[.5], std=[.5])
+img_norm_cfg = dict(mean=[.5, .5, .5], std=[.5, .5, .5])
 color_jitter_strength = 0.5
 
 train_pipeline = [
@@ -31,7 +31,7 @@ if not prefetch:
 
 # dataset summary
 data = dict(
-    samples_per_gpu=1024,  # total 4096=1024*4
+    samples_per_gpu=2048,  # total 4096=1024*2
     workers_per_gpu=8,
     train=dict(
         type=dataset_type,
@@ -44,3 +44,5 @@ data = dict(
         pipelines=[train_pipeline],
         prefetch=prefetch,
     ))
+
+custom_hooks = [dict(type='CossimHook')]

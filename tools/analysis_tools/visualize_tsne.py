@@ -1,12 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os.path as osp
-import time
 
 import matplotlib.pyplot as plt
 import mmcv
 import numpy as np
 import torch
+from matplotlib import cm
 from mmcv import Config, DictAction
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import get_dist_info, init_dist, load_checkpoint
@@ -16,6 +16,7 @@ from mmselfsup.apis import set_random_seed
 from mmselfsup.datasets import build_dataloader, build_dataset
 from mmselfsup.models import build_algorithm
 from mmselfsup.models.utils import ExtractProcess
+from mmselfsup.utils import clustering as _clustering
 from mmselfsup.utils import get_root_logger
 
 
@@ -50,6 +51,11 @@ def parse_args():
         default=20,
         help='the maximum number of classes to apply t-SNE algorithms, now the'
         'function supports maximum 20 classes')
+    parser.add_argument(
+        '--max_num_sample_plot',
+        type=int,
+        default=20000,
+        help='the maximum number of samples to plot.')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument(
         '--deterministic',
@@ -104,6 +110,13 @@ def parse_args():
         'the optimization')
     parser.add_argument(
         '--init', type=str, default='random', help='The init method')
+
+    # clustering settings
+    parser.add_argument(
+        '-k',
+        type=int,
+        default=30,
+        help='k for k-means clustering, the categories of pseudo labels.')
     args = parser.parse_args()
     return args
 
@@ -139,8 +152,7 @@ def main():
         init_dist(args.launcher, **cfg.dist_params)
 
     # create work_dir and init the logger before other steps
-    timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-    tsne_work_dir = osp.join(cfg.work_dir, f'tsne_{timestamp}/')
+    tsne_work_dir = osp.join(cfg.work_dir, '')
     mmcv.mkdir_or_exist(osp.abspath(tsne_work_dir))
     log_file = osp.join(tsne_work_dir, 'extract.log')
     logger = get_root_logger(log_file=log_file, log_level=cfg.log_level)
@@ -154,12 +166,15 @@ def main():
     # build the dataloader
     dataset_cfg = mmcv.Config.fromfile(args.dataset_config)
     dataset = build_dataset(dataset_cfg.data.extract)
+    gt_labels = dataset.data_source.get_gt_labels()
+
     # compress dataset, select that the label is less then max_num_class
     tmp_infos = []
     for i in range(len(dataset)):
         if dataset.data_source.data_infos[i]['gt_label'] < args.max_num_class:
             tmp_infos.append(dataset.data_source.data_infos[i])
     dataset.data_source.data_infos = tmp_infos
+
     logger.info(f'Apply t-SNE to visualize {len(dataset)} samples.')
 
     if 'imgs_per_gpu' in cfg.data:
@@ -211,7 +226,6 @@ def main():
     extractor = ExtractProcess(
         pool_type=args.pool_type, backbone='resnet50', layer_indices=layer_ind)
     features = extractor.extract(model, data_loader, distributed=distributed)
-    labels = dataset.data_source.get_gt_labels()
 
     # save features
     mmcv.mkdir_or_exist(f'{tsne_work_dir}features/')
@@ -229,6 +243,21 @@ def main():
                 f'{tsne_work_dir}features/{dataset_cfg.name}_{key}.npy'
             np.save(output_file, val)
 
+    # clustering
+    clustering = dict(type='Kmeans', k=args.k, pca_dim=256)
+    clustering_algo = _clustering.__dict__[clustering.pop('type')](
+        **clustering)
+    logger.info('Running clustering......')
+    # Features are normalized during clustering
+    clustering_algo.cluster(features['feat5'], verbose=True)
+    assert isinstance(clustering_algo.labels, np.ndarray)
+    clustering_pseudo_labels = clustering_algo.labels.astype(np.int64)
+    # save clustering_pseudo_labels
+    mmcv.mkdir_or_exist(f'{tsne_work_dir}clustering_pseudo_labels/')
+    output_file = \
+        f'{tsne_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy'
+    np.save(output_file, clustering_pseudo_labels)
+
     # build t-SNE model
     tsne_model = TSNE(
         n_components=args.n_components,
@@ -237,24 +266,40 @@ def main():
         learning_rate=args.learning_rate,
         n_iter=args.n_iter,
         n_iter_without_progress=args.n_iter_without_progress,
-        init=args.init)
+        init=args.init,
+        n_jobs=-1)
 
     # run and get results
     mmcv.mkdir_or_exist(f'{tsne_work_dir}saved_pictures/')
     logger.info('Running t-SNE......')
+    if len(dataset) > args.max_num_sample_plot:
+        indices = np.random.permutation(
+            len(dataset))[:args.max_num_sample_plot]
+    else:
+        indices = np.arange(len(dataset))
     for key, val in features.items():
         result = tsne_model.fit_transform(val)
         res_min, res_max = result.min(0), result.max(0)
         res_norm = (result - res_min) / (res_max - res_min)
         plt.figure(figsize=(10, 10))
         plt.scatter(
-            res_norm[:, 0],
-            res_norm[:, 1],
+            res_norm[indices, 0],
+            res_norm[indices, 1],
             alpha=1.0,
             s=15,
-            c=labels,
+            c=gt_labels[indices],
             cmap='tab20')
-        plt.savefig(f'{tsne_work_dir}saved_pictures/{key}.png')
+        plt.savefig(f'{tsne_work_dir}saved_pictures/{key}_gt_labels.png')
+        plt.figure(figsize=(10, 10))
+        plt.scatter(
+            res_norm[indices, 0],
+            res_norm[indices, 1],
+            alpha=1.0,
+            s=15,
+            c=clustering_pseudo_labels[indices],
+            cmap=cm.get_cmap('nipy_spectral', args.k))
+        plt.savefig(
+            f'{tsne_work_dir}saved_pictures/{key}_kmeans_psuedo_labels.png')
     logger.info(f'Saved results to {tsne_work_dir}saved_pictures/')
 
 
