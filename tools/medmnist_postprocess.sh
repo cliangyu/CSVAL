@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PORT=${PORT:-29500}
 
-declare -a StringArray=("path" "oct" "breast" "derma" "blood" )
+declare -a StringArray=("oct" )
 
 for dataset in ${StringArray[@]}; do
     CONFIG="configs/selfsup/simclr/simclr_resnet50_4xb1024-coslr-200e_${dataset}.py"

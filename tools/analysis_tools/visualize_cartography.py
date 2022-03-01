@@ -132,9 +132,9 @@ def compute_train_dy_metrics(logger, training_dynamics, args):
 
     for idx in tqdm(training_dynamics):
         record = training_dynamics[idx]
-        # skip examples that do not have training dynamics for all epochs
-        if len(record['cossim']) < num_tot_epochs:
-            continue
+        # # skip examples that do not have training dynamics for all epochs
+        # if len(record['cossim']) < num_tot_epochs:
+        #     continue
         confidence_[idx] = np.mean(record['cossim'])
         variability_[idx] = variability_func(record['cossim'])
 
