@@ -55,7 +55,7 @@ class CossimHook(Hook):
         })
 
         logging_dir = osp.join(output_dir, f'{split}_dynamics')
-        # Create directory for logging training dynamics, if it doesn't already exist.
+        # create directory for logging training dynamics
         mmcv.mkdir_or_exist(logging_dir)
         epoch_file_name = osp.join(logging_dir,
                                    f'dynamics_epoch_{epoch}.jsonl')

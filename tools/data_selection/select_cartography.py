@@ -19,6 +19,40 @@ def check_best_patial(plist, num_train):
     print([int(num_train * i / 100000.0) for i in plist])
 
 
+def plot_class_dist(labels,
+                    percentage,
+                    save_dir,
+                    logger,
+                    title=None,
+                    figsize=[40, 40],
+                    ylim=(None, None)):
+    classes, counts = np.unique(labels, return_counts=True)
+    logger.info(f'class counts:{counts}')
+    df_rel = pd.DataFrame(columns=['classes', 'counts'])
+    df_rel['classes'], df_rel['counts'] = classes, counts
+    plt.rcParams['figure.figsize'] = figsize
+    plt.rcParams['figure.autolayout'] = True
+    df_rel.plot(
+        x='classes',
+        y='counts',
+        kind='bar',
+        stacked=True,
+        title=title,
+        legend=None,
+        figsize=figsize,
+        colormap='Reds_r',
+        xlabel=None,
+        xticks=None,
+        width=0.9)
+    plt.gca().axes.get_xaxis().set_visible(False)
+    plt.ylim(ylim)
+    plt.savefig(
+        osp.join(save_dir, f'p-0.{percentage}_distribution_histogram.png'))
+    plt.clf()
+    plt.cla()
+    plt.close('all')
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description='select samples with uniformity and cartography metrics')
@@ -75,7 +109,7 @@ def main():
             'clustering_pseudo_labels', f'{dataset_cfg.name}.npy')
     pseudo_labels = np.load(args.pseudo_labels)
     num_pseudo_class = len(np.unique(pseudo_labels))
-    # rank each pseudo class with cartography metrics, e.g., ambiguity (variability of cossim)
+    # rank each pseudo class with cartography metrics
     if args.training_dynamics is None:
         args.training_dynamics = osp.join(
             './work_dirs', work_type,
@@ -109,6 +143,10 @@ def main():
         raise ValueError('metric not supported')
 
     selection_df = selection_df.sort_values(metric, ascending=ascending)
+    plot_dir = osp.join(cfg.work_dir, 'distribution_histogram')
+    mmcv.mkdir_or_exist(plot_dir)
+
+    plt.rcParams.update({'figure.max_open_warning': 0})
 
     for ind, num_select in enumerate(plist):
         # sample uniformly from pseudo classes.
@@ -119,6 +157,7 @@ def main():
             indices.extend(selection_df[selection_df['pseudo_label'] == label]
                            ['idx'][:len(indice_placeholder)])
         indices = np.array(indices)
+
         # save results
         dataset_name = dataset_cfg.name.split('_')[0]
         percentage = p[ind]
@@ -126,6 +165,13 @@ def main():
                             f'{dataset_name}-p0.{percentage}.npy')
         np.save(save_dir, indices)
         logger.info(f'{len(indices)} samples saved to {save_dir}')
+
+        # plot gt_label distribution
+        plot_class_dist(
+            labels=selection_df[selection_df.idx.isin(indices)]['gt_label'],
+            percentage=percentage,
+            logger=logger,
+            save_dir=plot_dir)
 
 
 if __name__ == '__main__':

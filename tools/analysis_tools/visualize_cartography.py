@@ -66,7 +66,8 @@ def read_training_dynamics(
     """
     Given path to logged training dynamics, merge stats across epochs.
     Returns:
-    - Dict between ID of a train instances and its gold label, and the list of cossim across epochs.
+    - Dict between ID of a train instances and its gold label,
+    and the list of cossim across epochs.
     """
     train_dynamics = {}
 
@@ -98,14 +99,17 @@ def read_training_dynamics(
 
 def compute_train_dy_metrics(logger, training_dynamics, args):
     """
-    Given the training dynamics (cossim for each training instance across epochs), compute metrics
+    Given the training dynamics (cossim for each training
+    instance across epochs), compute metrics
     based on it, for data map coorodinates.
-    Computed metrics are: confidence, variability, correctness, forgetfulness, threshold_closeness---
+    Computed metrics are: confidence, variability
     the last two being baselines from prior work
-    (Example Forgetting: https://arxiv.org/abs/1812.05159 and Active Bias: https://arxiv.org/abs/1704.07433 respectively).
+    (Example Forgetting: https://arxiv.org/abs/1812.05159 and
+    Active Bias: https://arxiv.org/abs/1704.07433 respectively).
     Returns:
     - DataFrame with these metrics.
-    - DataFrame with more typical training evaluation metrics, such as accuracy / loss.
+    - DataFrame with more typical training evaluation metrics,
+    such as accuracy / loss.
     """
     confidence_ = {}
     variability_ = {}
@@ -117,7 +121,7 @@ def compute_train_dy_metrics(logger, training_dynamics, args):
     # Based on prior work on active bias (https://arxiv.org/abs/1704.07433)
     if args.include_ci:
 
-        def variability_func(conf):
+        def variability_func(conf):  # noqa: F811
             return np.sqrt(
                 np.var(conf) + np.var(conf) * np.var(conf) / (len(conf) - 1))
 
@@ -126,11 +130,9 @@ def compute_train_dy_metrics(logger, training_dynamics, args):
     logger.info(f'Computing training dynamics across {num_tot_epochs} epochs')
     logger.info('Metrics computed: confidence, variability')
 
-    cossim = {i: [] for i in range(num_tot_epochs)}
-
     for idx in tqdm(training_dynamics):
         record = training_dynamics[idx]
-        # skip examples that we do not have training dynamics for all epochs for
+        # skip examples that do not have training dynamics for all epochs
         if len(record['cossim']) < num_tot_epochs:
             continue
         confidence_[idx] = np.mean(record['cossim'])
@@ -219,9 +221,9 @@ def plot_data_map(logger,
             rotation=350,
             bbox=bb(bbc))
 
-    an1 = func_annotate('ambiguous', xyc=(0.9, 0.5), bbc='white')
-    an2 = func_annotate('easy-to-learn', xyc=(0.27, 0.85), bbc='white')
-    an3 = func_annotate('hard-to-learn', xyc=(0.35, 0.25), bbc='white')
+    _ = func_annotate('ambiguous', xyc=(0.9, 0.5), bbc='white')
+    _ = func_annotate('easy-to-learn', xyc=(0.27, 0.85), bbc='white')
+    _ = func_annotate('hard-to-learn', xyc=(0.35, 0.25), bbc='white')
     if show_bound:
 
         def bound(conf):
@@ -291,7 +293,7 @@ def plot_data_map(logger,
         plot2.tick_params(axis='x', rotation=60)
 
     fig.tight_layout()
-    filename = f'{plot_dir}/{dataset_name}.png' if show_hist else f'{plot_dir}/compact_{dataset_name}.png'
+    filename = f'{plot_dir}/{dataset_name}.png'
     fig.savefig(filename)
     logger.info(f'Plot saved to {filename}')
     fig.show()
@@ -337,13 +339,11 @@ def main():
                                                     args)
         train_dy_metrics.to_json(
             train_dy_filename, orient='records', lines=True)
-        logger.info(
-            f'Metrics for {args.split} data based on training dynamics written to {train_dy_filename}'
-        )
+        logger.info(f'Metrics for {args.split} data based on training'
+                    'dynamics written to {train_dy_filename}')
     else:
-        logger.info(
-            f'Read metrics for {args.split} data based on training dynamics from {train_dy_filename}'
-        )
+        logger.info(f'Read metrics for {args.split} data based on training '
+                    'dynamics from {train_dy_filename}')
         train_dy_metrics = pd.read_json(train_dy_filename, lines=True)
 
     # plot cartography

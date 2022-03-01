@@ -1,5 +1,5 @@
 # dataset settings
-data_source = 'PathMNIST'
+data_source = 'BloodMNIST'
 dataset_type = 'MultiViewDataset'
 img_norm_cfg = dict(mean=[.5, .5, .5], std=[.5, .5, .5])
 color_jitter_strength = 0.5
