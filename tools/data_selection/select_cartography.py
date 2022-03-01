@@ -105,7 +105,7 @@ def main():
     if args.pseudo_labels is None:
         args.pseudo_labels = osp.join(
             './work_dirs', work_type,
-            osp.splitext(osp.basename(args.config))[0], 'tsne',
+            osp.splitext(osp.basename(args.config))[0],
             'clustering_pseudo_labels', f'{dataset_cfg.name}.npy')
     pseudo_labels = np.load(args.pseudo_labels)
     num_pseudo_class = len(np.unique(pseudo_labels))
@@ -121,15 +121,35 @@ def main():
     selection_df['pseudo_label'] = pseudo_labels
     selection_df['gt_label'] = gt_labels
 
-    # plist = [i for i in range(10, 100, 10)] + \
-    plist = [i for i in range(15, 100, 5)] + \
-        [i for i in range(100, 1000, 50)] + \
-        [i for i in range(1000, 10000, 500)] + \
-        [i for i in range(10000, 100000, 5000)]
-    check_best_patial(plist=plist, num_train=len(dataset))
+    # define percentage list
+    dataset_name = dataset_cfg.name.split('_')[0]
+    if dataset_name in ['pathmnist']:
+        plist = [i for i in range(15, 100, 5)] + \
+            [i for i in range(100, 1000, 50)] + \
+            [i for i in range(1000, 10000, 500)] + \
+            [i for i in range(10000, 100000, 5000)]
+    elif dataset_name in [
+            'organmnist', 'pneumoniamnist', 'bloodmnist', 'dermamnist'
+    ]:
+        plist = [i for i in range(100, 1000, 100)] + \
+            [i for i in range(1000, 10000, 1000)] + \
+            [i for i in range(10000, 100000, 10000)]
+    elif dataset_name in ['tissuemnist', 'octmnist']:
+        plist = [i for i in range(10, 100, 10)] + \
+            [i for i in range(100, 1000, 100)] + \
+            [i for i in range(1000, 10000, 1000)] + \
+            [i for i in range(10000, 100000, 10000)]
+    elif dataset_name in ['breastmnist', 'retinamnist']:
+        plist = [i for i in range(500, 10000, 500)] + \
+            [i for i in range(10000, 100000, 5000)]
+
+    num_train = len(dataset)
+    check_best_patial(plist, num_train)
     zfill = 5
     p = [str(i).zfill(zfill) for i in plist]
+    num_select_list = [int(num_train * i / 100000.0) for i in plist]
 
+    # rank by metrics
     if args.metric == 'easy':
         metric = 'confidence'
         ascending = False
@@ -148,7 +168,7 @@ def main():
 
     plt.rcParams.update({'figure.max_open_warning': 0})
 
-    for ind, num_select in enumerate(plist):
+    for ind, num_select in enumerate(num_select_list):
         # sample uniformly from pseudo classes.
         bucket = np.array_split(range(num_select), num_pseudo_class)
         random.shuffle(bucket)
@@ -159,7 +179,6 @@ def main():
         indices = np.array(indices)
 
         # save results
-        dataset_name = dataset_cfg.name.split('_')[0]
         percentage = p[ind]
         save_dir = osp.join(cfg.work_dir,
                             f'{dataset_name}-p0.{percentage}.npy')

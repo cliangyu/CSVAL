@@ -15,9 +15,7 @@ RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 git ninja-build 
 # Install MMCV MMDetection MMSegmentation
 RUN pip install mmcv-full==1.3.16 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/index.html
 RUN pip install mmsegmentation mmdet
-# # faiss-gpu 1.6.5 is needed to install tsnecuda
 # RUN conda install -c conda-forge faiss-gpu=1.6.5 cudatoolkit=11.3
-# RUN pip install tsnecuda==3.0.0+cu113 -f https://tsnecuda.isx.ai/tsnecuda_stable.html
 # Install MMSelfSup
 RUN conda clean --all
 RUN git clone https://github.com/c-liangyu/mmselfsup.git  /mmselfsup

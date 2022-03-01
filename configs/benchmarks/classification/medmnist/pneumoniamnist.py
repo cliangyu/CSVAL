@@ -1,6 +1,7 @@
-data_source = 'PathMNIST'
+data_source = 'PneumoniaMNIST'
+split = 'train'
 dataset_type = 'SingleViewDataset'
-name = 'pathmnist_train'
+name = f'{data_source.lower()}_{split}'
 img_norm_cfg = dict(mean=[.5], std=[.5])
 
 data = dict(
@@ -11,7 +12,7 @@ data = dict(
         data_source=dict(
             type=data_source,
             data_prefix='data/medmnist',
-            split='train',
+            split=split,
         ),
         pipeline=[
             dict(type='ToTensor'),

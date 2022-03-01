@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/breastmnist_simclr.py',
+    '../_base_/datasets/medmnist/breastmnist_simclr.py',
     '../_base_/medmnist_simclr_runtime.py',
 ]
 
