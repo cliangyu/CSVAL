@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os.path as osp
-import random
 
 import matplotlib.pyplot as plt
 import mmcv
@@ -165,22 +164,40 @@ def main():
     selection_df = selection_df.sort_values(metric, ascending=ascending)
     plot_dir = osp.join(cfg.work_dir, 'distribution_histogram')
     mmcv.mkdir_or_exist(plot_dir)
+    sample_by_percentage_dir = osp.join(cfg.work_dir, 'sample_by_percentage')
+    mmcv.mkdir_or_exist(sample_by_percentage_dir)
 
     plt.rcParams.update({'figure.max_open_warning': 0})
 
+    # generate the whole sorting list
+    pseudo_label_order = np.arange(num_pseudo_class)
+    np.random.shuffle(pseudo_label_order)
+    label_dict = {}
+    largest_cluster_size = 0
+    for pseudo_label in pseudo_label_order:
+        label_dict[pseudo_label] = np.array(
+            selection_df[selection_df['pseudo_label'] == pseudo_label]['idx'])
+        largest_cluster_size = len(label_dict[pseudo_label]) if len(
+            label_dict[pseudo_label]
+        ) > largest_cluster_size else largest_cluster_size
+    sample_list = np.array([], dtype=np.int8)
+    for i in range(largest_cluster_size):
+        for pseudo_label in pseudo_label_order:
+            try:
+                sample_list = np.append(sample_list,
+                                        label_dict[pseudo_label][i])
+            except KeyError:
+                pass
+    assert len(sample_list) == len(dataset)
+    save_dir = osp.join(cfg.work_dir, f'{dataset_name}_sorted_idx.npy')
+    np.save(save_dir, sample_list)
+
     for ind, num_select in enumerate(num_select_list):
-        # sample uniformly from pseudo classes.
-        bucket = np.array_split(range(num_select), num_pseudo_class)
-        random.shuffle(bucket)
-        indices = []
-        for label, indice_placeholder in enumerate(bucket):
-            indices.extend(selection_df[selection_df['pseudo_label'] == label]
-                           ['idx'][:len(indice_placeholder)])
-        indices = np.array(indices)
+        indices = sample_list[:num_select]
 
         # save results
         percentage = p[ind]
-        save_dir = osp.join(cfg.work_dir,
+        save_dir = osp.join(sample_by_percentage_dir,
                             f'{dataset_name}-p0.{percentage}.npy')
         np.save(save_dir, indices)
         logger.info(f'{len(indices)} samples saved to {save_dir}')

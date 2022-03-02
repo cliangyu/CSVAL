@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PORT=${PORT:-29500}
 
-declare -a StringArray=("oct" )
+declare -a StringArray=("path" "pneumonia" "oct" "breast" "derma" "blood")
 
 for dataset in ${StringArray[@]}; do
     CONFIG="configs/selfsup/simclr/simclr_resnet50_4xb1024-coslr-200e_${dataset}.py"
@@ -23,6 +23,7 @@ for dataset in ${StringArray[@]}; do
     --dataset_config=$DATASET_CONFIG
 
     python $(dirname "$0")/data_selection/select_cartography.py $CONFIG \
-    --dataset_config=$DATASET_CONFIG
+    --dataset_config=$DATASET_CONFIG \
+    --metric=easy
 
 done
