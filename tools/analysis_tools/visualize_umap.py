@@ -1,13 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os.path as osp
+import pickle
 
+import matplotlib
 import matplotlib.pyplot as plt
 import mmcv
 import numpy as np
+import seaborn as sns
 import torch
 import umap
 from matplotlib import cm
+from matplotlib.colors import ListedColormap
 from mmcv import Config, DictAction
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import get_dist_info, init_dist, load_checkpoint
@@ -56,7 +60,16 @@ def parse_args():
         type=int,
         default=20000,
         help='the maximum number of samples to plot.')
+    parser.add_argument(
+        '--num_selected_sample',
+        type=int,
+        default=30,
+        help='the number of visualized selected samples.')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
+    parser.add_argument(
+        '--sorted_idx_file', type=str, help='sorted idx .npy file.')
+    parser.add_argument(
+        '--plot_name', type=str, help='file name of the saved plots.')
     parser.add_argument(
         '--deterministic',
         action='store_true',
@@ -136,88 +149,94 @@ def main():
             tmp_infos.append(dataset.data_source.data_infos[i])
     dataset.data_source.data_infos = tmp_infos
 
-    logger.info(f'Apply UMAP to visualize {len(dataset)} samples.')
+    # extract features
+    if osp.isfile(f'{umap_work_dir}features/features.pkl'):
+        with open(f'{umap_work_dir}features/features.pkl', 'rb') as f:
+            features = pickle.load(f)
+    else:
+        logger.info(f'Apply UMAP to visualize {len(dataset)} samples.')
 
-    if 'imgs_per_gpu' in cfg.data:
-        logger.warning('"imgs_per_gpu" is deprecated. '
-                       'Please use "samples_per_gpu" instead')
-        if 'samples_per_gpu' in cfg.data:
-            logger.warning(
-                f'Got "imgs_per_gpu"={cfg.data.imgs_per_gpu} and '
-                f'"samples_per_gpu"={cfg.data.samples_per_gpu}, "imgs_per_gpu"'
-                f'={cfg.data.imgs_per_gpu} is used in this experiments')
-        else:
-            logger.warning(
-                'Automatically set "samples_per_gpu"="imgs_per_gpu"='
-                f'{cfg.data.imgs_per_gpu} in this experiments')
-        cfg.data.samples_per_gpu = cfg.data.imgs_per_gpu
-    data_loader = build_dataloader(
-        dataset,
-        samples_per_gpu=dataset_cfg.data.samples_per_gpu,
-        workers_per_gpu=dataset_cfg.data.workers_per_gpu,
-        dist=distributed,
-        shuffle=False)
+        if 'imgs_per_gpu' in cfg.data:
+            cfg.data.samples_per_gpu = cfg.data.imgs_per_gpu
+        data_loader = build_dataloader(
+            dataset,
+            samples_per_gpu=dataset_cfg.data.samples_per_gpu,
+            workers_per_gpu=dataset_cfg.data.workers_per_gpu,
+            dist=distributed,
+            shuffle=False)
 
-    # build the model
-    model = build_algorithm(cfg.model)
-    model.init_weights()
+        # build the model
+        model = build_algorithm(cfg.model)
+        model.init_weights()
 
-    # model is determined in this priority: init_cfg > checkpoint > random
-    if hasattr(cfg.model.backbone, 'init_cfg'):
-        if getattr(cfg.model.backbone.init_cfg, 'type', None) == 'Pretrained':
+        # model is determined in this priority: init_cfg > checkpoint > random
+        if hasattr(cfg.model.backbone, 'init_cfg'):
+            if getattr(cfg.model.backbone.init_cfg, 'type',
+                       None) == 'Pretrained':
+                logger.info(f'Use pretrained model: '
+                            f'{cfg.model.backbone.init_cfg.checkpoint}'
+                            f'to extract features')
+        elif args.checkpoint is not None:
             logger.info(
-                f'Use pretrained model: '
-                f'{cfg.model.backbone.init_cfg.checkpoint} to extract features'
-            )
-    elif args.checkpoint is not None:
-        logger.info(f'Use checkpoint: {args.checkpoint} to extract features')
-        load_checkpoint(model, args.checkpoint, map_location='cpu')
-    else:
-        logger.info('No pretrained or checkpoint is given, use random init.')
+                f'Use checkpoint: {args.checkpoint} to extract features')
+            load_checkpoint(model, args.checkpoint, map_location='cpu')
+        else:
+            logger.info(
+                'No pretrained or checkpoint is given, use random init.')
 
-    if not distributed:
-        model = MMDataParallel(model, device_ids=[0])
-    else:
-        model = MMDistributedDataParallel(
-            model.cuda(),
-            device_ids=[torch.cuda.current_device()],
-            broadcast_buffers=False)
+        if not distributed:
+            model = MMDataParallel(model, device_ids=[0])
+        else:
+            model = MMDistributedDataParallel(
+                model.cuda(),
+                device_ids=[torch.cuda.current_device()],
+                broadcast_buffers=False)
 
-    # build extraction processor and run
-    extractor = ExtractProcess(
-        pool_type=args.pool_type, backbone='resnet50', layer_indices=layer_ind)
-    features = extractor.extract(model, data_loader, distributed=distributed)
+        # build extraction processor and run
+        extractor = ExtractProcess(
+            pool_type=args.pool_type,
+            backbone='resnet50',
+            layer_indices=layer_ind)
+        features = extractor.extract(
+            model, data_loader, distributed=distributed)
 
-    # save features
-    mmcv.mkdir_or_exist(f'{umap_work_dir}features/')
-    logger.info(f'Save features to {umap_work_dir}features/')
-    if distributed:
-        rank, _ = get_dist_info()
-        if rank == 0:
+        # save features
+        mmcv.mkdir_or_exist(f'{umap_work_dir}features/')
+        logger.info(f'Save features to {umap_work_dir}features/')
+        if distributed:
+            rank, _ = get_dist_info()
+            if rank == 0:
+                for key, val in features.items():
+                    output_file = \
+                        f'{umap_work_dir}features/{dataset_cfg.name}_{key}.npy'
+                    np.save(output_file, val)
+        else:
             for key, val in features.items():
                 output_file = \
                     f'{umap_work_dir}features/{dataset_cfg.name}_{key}.npy'
                 np.save(output_file, val)
-    else:
-        for key, val in features.items():
-            output_file = \
-                f'{umap_work_dir}features/{dataset_cfg.name}_{key}.npy'
-            np.save(output_file, val)
+        with open(f'{umap_work_dir}features/features.pkl', 'wb') as f:
+            pickle.dump(features, f)
 
     # clustering
-    clustering = dict(type='Kmeans', k=args.k, pca_dim=256)
-    clustering_algo = _clustering.__dict__[clustering.pop('type')](
-        **clustering)
-    logger.info('Running clustering......')
-    # Features are normalized during clustering
-    clustering_algo.cluster(features['feat5'], verbose=True)
-    assert isinstance(clustering_algo.labels, np.ndarray)
-    clustering_pseudo_labels = clustering_algo.labels.astype(np.int64)
-    # save clustering_pseudo_labels
-    mmcv.mkdir_or_exist(f'{umap_work_dir}clustering_pseudo_labels/')
-    output_file = \
-        f'{umap_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy'
-    np.save(output_file, clustering_pseudo_labels)
+    if osp.isfile(
+            f'{umap_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy'):
+        clustering_pseudo_labels = np.load(
+            f'{umap_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy')
+    else:
+        clustering = dict(type='Kmeans', k=args.k, pca_dim=256)
+        clustering_algo = _clustering.__dict__[clustering.pop('type')](
+            **clustering)
+        logger.info('Running clustering......')
+        # Features are normalized during clustering
+        clustering_algo.cluster(features['feat5'], verbose=True)
+        assert isinstance(clustering_algo.labels, np.ndarray)
+        clustering_pseudo_labels = clustering_algo.labels.astype(np.int64)
+        # save clustering_pseudo_labels
+        mmcv.mkdir_or_exist(f'{umap_work_dir}clustering_pseudo_labels/')
+        output_file = \
+            f'{umap_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy'
+        np.save(output_file, clustering_pseudo_labels)
 
     # build UMAP model
     reducer = umap.UMAP()
@@ -230,29 +249,107 @@ def main():
             len(dataset))[:args.max_num_sample_plot]
     else:
         indices = np.arange(len(dataset))
+    dataset_name = dataset_cfg.name.split('_')[0]
+
+    # calculate sorted index
+    if args.sorted_idx_file is None:
+        args.sorted_idx_file = osp.join(umap_work_dir, 'data_selection',
+                                        f'{dataset_name}_sorted_idx.npy')
+    sorted_idx = np.load(args.sorted_idx_file)
+    selected_idx = sorted_idx[np.isin(sorted_idx,
+                                      indices)][:args.num_selected_sample]
+
     for key, val in features.items():
-        result = reducer.fit_transform(val)
+        output_file = osp.join(f'{umap_work_dir}features',
+                               f'{dataset_cfg.name}_{key}_umap.npy')
+        if osp.isfile(output_file):
+            result = np.load(output_file)
+        else:
+            result = reducer.fit_transform(val)
+            np.save(output_file, result)
         res_min, res_max = result.min(0), result.max(0)
         res_norm = (result - res_min) / (res_max - res_min)
+
+        plt.figure(figsize=(10, 10))
+        my_pal = [
+            '#e60049', '#0bb4ff', '#50e991', '#e6d800', '#9b19f5', '#ffa300',
+            '#dc0ab4', '#b3d4ff', '#00bfa0'
+        ]
+        pal = ListedColormap(
+            sns.color_palette(my_pal,
+                              n_colors=len(np.unique(gt_labels))).as_hex())
+        # plot round scatter plot for unselected samples
+        plt.scatter(
+            res_norm[np.setdiff1d(indices, selected_idx), 0],
+            res_norm[np.setdiff1d(indices, selected_idx), 1],
+            alpha=0.2,
+            s=15,
+            c=gt_labels[np.setdiff1d(indices, selected_idx)],
+            cmap=pal)
+        # plot cross scatter plot for selected samples
+        plt.scatter(
+            res_norm[selected_idx, 0],
+            res_norm[selected_idx, 1],
+            alpha=1.0,
+            s=500,
+            marker='X',
+            edgecolors='black',
+            c=gt_labels[selected_idx],
+            cmap=pal)
+        ax = plt.gca()
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+        plt.tight_layout()
+        if args.plot_name is None:
+            gt_label_plot_name = osp.join(f'{umap_work_dir}saved_pictures/',
+                                          '{key}_gt_labels.png')
+        else:
+            gt_label_plot_name = osp.join(
+                f'{umap_work_dir}saved_pictures/',
+                f'{key}_{args.plot_name}_gt_labels.png')
+        plt.savefig(gt_label_plot_name)
+
+        # plot pseudo labels
+        light_cmap = cm.get_cmap('nipy_spectral', args.k)
+        # modify colormap
+        alpha = .5
+        colors = []
+        for ind in range(light_cmap.N):
+            c = []
+            for x in light_cmap(ind)[:3]:
+                c.append(x * alpha)
+            colors.append(tuple(c))
+        dark_cmap = matplotlib.colors.ListedColormap(colors, name='dark')
         plt.figure(figsize=(10, 10))
         plt.scatter(
-            res_norm[indices, 0],
-            res_norm[indices, 1],
+            res_norm[np.setdiff1d(indices, selected_idx), 0],
+            res_norm[np.setdiff1d(indices, selected_idx), 1],
             alpha=1.0,
             s=15,
-            c=gt_labels[indices],
-            cmap='tab20')
-        plt.savefig(f'{umap_work_dir}saved_pictures/{key}_gt_labels.png')
-        plt.figure(figsize=(10, 10))
+            c=clustering_pseudo_labels[np.setdiff1d(indices, selected_idx)],
+            cmap=light_cmap)
         plt.scatter(
-            res_norm[indices, 0],
-            res_norm[indices, 1],
+            res_norm[selected_idx, 0],
+            res_norm[selected_idx, 1],
             alpha=1.0,
-            s=15,
-            c=clustering_pseudo_labels[indices],
-            cmap=cm.get_cmap('nipy_spectral', args.k))
+            s=30,
+            marker='X',
+            c=clustering_pseudo_labels[selected_idx],
+            cmap=dark_cmap)
+        ax = plt.gca()
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+        plt.tight_layout()
         plt.savefig(
             f'{umap_work_dir}saved_pictures/{key}_kmeans_psuedo_labels.png')
+        if args.plot_name is None:
+            psuedo_label_plot_name = osp.join(
+                f'{umap_work_dir}saved_pictures/', f'{key}_pseudo_labels.png')
+        else:
+            psuedo_label_plot_name = osp.join(
+                f'{umap_work_dir}saved_pictures/',
+                f'{key}_{args.plot_name}_pseudo_labels.png')
+        plt.savefig(psuedo_label_plot_name)
     logger.info(f'Saved results to {umap_work_dir}saved_pictures/')
 
 

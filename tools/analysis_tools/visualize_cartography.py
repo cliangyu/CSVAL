@@ -17,6 +17,8 @@ from mmselfsup.apis import set_random_seed
 from mmselfsup.datasets import build_dataset
 from mmselfsup.utils import get_root_logger
 
+plt.locator_params(nbins=4)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='visualize cartography')
@@ -38,7 +40,7 @@ def parse_args():
     parser.add_argument(
         '--max_num_sample_plot',
         type=int,
-        default=20000,
+        default=25000,
         help='the maximum number of samples to plot.')
     parser.add_argument(
         '--overwrite_train_dy',
@@ -187,14 +189,19 @@ def plot_data_map(logger,
     style = None
 
     if not show_hist:
-        fig, ax0 = plt.subplots(1, 1, figsize=(8, 6))
+        fig, ax0 = plt.subplots(1, 1, figsize=(8, 12))
     else:
         fig = plt.figure(figsize=(14, 10), )
         gs = fig.add_gridspec(3, 2, width_ratios=[5, 1])
         ax0 = fig.add_subplot(gs[:, 0])
 
-    pal = sns.color_palette('husl', n_colors=num_hues)
+    my_pal = [
+        '#e60049', '#0bb4ff', '#50e991', '#e6d800', '#9b19f5', '#ffa300',
+        '#dc0ab4', '#b3d4ff', '#00bfa0'
+    ]
+    pal = sns.color_palette(my_pal, n_colors=num_hues)
 
+    dataframe = dataframe.sort_values('gt_label')
     plot = sns.scatterplot(
         x=main_metric,
         y=other_metric,
@@ -203,6 +210,7 @@ def plot_data_map(logger,
         hue=hue,
         palette=pal,
         style=style,
+        alpha=0.3,
         s=30)
 
     # Annotate Regions.
@@ -239,18 +247,17 @@ def plot_data_map(logger,
                  color='black')
 
     if not show_hist:
-        handles, labels = plot.get_legend_handles_labels()
-        plot.legend(
-            reversed(handles),
-            reversed(labels),
-            title='GT label',
-            fancybox=True,
-            shadow=True,
-            ncol=1,
-            # loc='center left'
-            bbox_to_anchor=(1.01, 1),
-        )
-
+        # handles, labels = plot.get_legend_handles_labels()
+        # alphabetical_order = np.argsort(labels)
+        # sorted_handles = np.array(handles)[alphabetical_order]
+        # sorted_labels = np.array(labels)[alphabetical_order]
+        # plot.legend(sorted_handles, sorted_labels,
+        #             fancybox=True, shadow=True,  ncol=2,
+        #             loc='upper center',
+        #             bbox_to_anchor=(0.5, -0.05),
+        #             )
+        leg = plt.legend()
+        leg.remove()
     else:
         handles, labels = plot.get_legend_handles_labels()
         plot.legend(
@@ -265,7 +272,7 @@ def plot_data_map(logger,
 
     if not plot_title:
         plot_title = f'{dataset_name} Data Map'
-    plot.set_title(plot_title, fontsize=17)
+    # plot.set_title(plot_title, fontsize=17)
 
     if show_hist:
         # Make the histograms.
@@ -293,7 +300,7 @@ def plot_data_map(logger,
         plot2.tick_params(axis='x', rotation=60)
 
     fig.tight_layout()
-    filename = f'{plot_dir}/{dataset_name}.png'
+    filename = f'{plot_dir}/{dataset_name}_pseudo_label.png'
     fig.savefig(filename)
     logger.info(f'Plot saved to {filename}')
     fig.show()
@@ -305,7 +312,9 @@ def main():
     cfg = Config.fromfile(args.config)
     dataset_cfg = mmcv.Config.fromfile(args.dataset_config)
     dataset = build_dataset(dataset_cfg.data.extract)
-    gt_labels = dataset.data_source.get_gt_labels()
+    gt_label_digit = dataset.data_source.get_gt_labels()
+    label_dict = dataset.data_source.info['label']
+    gt_labels = [label_dict[str(digit)] for digit in gt_label_digit]
 
     if args.work_dir is not None:
         # update configs according to CLI args if args.work_dir is not None
