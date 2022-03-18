@@ -1,5 +1,6 @@
 # dataset settings
 data_source = 'BreastMNIST'
+N = 2300
 dataset_type = 'MultiViewDataset'
 img_norm_cfg = dict(mean=[.5], std=[.5])
 color_jitter_strength = 0.5
@@ -34,13 +35,16 @@ data = dict(
     samples_per_gpu=2048,  # total 4096=2048*2
     workers_per_gpu=8,
     train=dict(
-        type=dataset_type,
-        data_source=dict(
-            type=data_source,
-            data_prefix='data/medmnist',
-            split='train',
-        ),
-        num_views=[2],
-        pipelines=[train_pipeline],
-        prefetch=prefetch,
-    ))
+        type='RepeatDataset',
+        times=N,
+        dataset=dict(
+            type=dataset_type,
+            data_source=dict(
+                type=data_source,
+                data_prefix='data/medmnist',
+                split='train',
+            ),
+            num_views=[2],
+            pipelines=[train_pipeline],
+            prefetch=prefetch,
+        )))

@@ -1,5 +1,6 @@
 # dataset settings
 data_source = 'DermaMNIST'
+N = 180
 dataset_type = 'MultiViewDataset'
 img_norm_cfg = dict(mean=[.5, .5, .5], std=[.5, .5, .5])
 color_jitter_strength = 0.5
@@ -32,15 +33,18 @@ if not prefetch:
 # dataset summary
 data = dict(
     samples_per_gpu=2048,  # total 4096=2048*2
-    workers_per_gpu=8,
+    workers_per_gpu=16,
     train=dict(
-        type=dataset_type,
-        data_source=dict(
-            type=data_source,
-            data_prefix='data/medmnist',
-            split='train',
-        ),
-        num_views=[2],
-        pipelines=[train_pipeline],
-        prefetch=prefetch,
-    ))
+        type='RepeatDataset',
+        times=N,
+        dataset=dict(
+            type=dataset_type,
+            data_source=dict(
+                type=data_source,
+                data_prefix='data/medmnist',
+                split='train',
+            ),
+            num_views=[2],
+            pipelines=[train_pipeline],
+            prefetch=prefetch,
+        )))

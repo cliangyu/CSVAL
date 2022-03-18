@@ -454,10 +454,12 @@ INFO = {
 
 class MedMNIST(BaseDataSource):
     flag = ...
+    CLASSES = []
 
     def __init__(self, split, **kwargs):
         self.info = INFO[self.flag]
         self.split = split
+        self.classes = list(self.info['label'].values())
         super(MedMNIST, self).__init__(**kwargs)
 
     def load_annotations(self):
