@@ -186,10 +186,13 @@ def main():
             try:
                 sample_list = np.append(sample_list,
                                         label_dict[pseudo_label][i])
-            except KeyError:
+            except (KeyError, IndexError):
                 pass
     assert len(sample_list) == len(dataset)
-    save_dir = osp.join(cfg.work_dir, f'{dataset_name}_sorted_idx.npy')
+    save_dir = osp.join(cfg.work_dir,
+                        f'{dataset_name}_{args.metric}_sorted_idx.npy')
+    logger.info(f'All samples saved to '
+                f'{dataset_name}_{args.metric}_sorted_idx.npy')
     np.save(save_dir, sample_list)
 
     for ind, num_select in enumerate(num_select_list):

@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import json
 import math
 import os
 import os.path as osp
@@ -10,14 +9,13 @@ import mmcv
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import ujson as json
 from mmcv import Config
 from tqdm import tqdm
 
 from mmselfsup.apis import set_random_seed
 from mmselfsup.datasets import build_dataset
 from mmselfsup.utils import get_root_logger
-
-plt.locator_params(nbins=4)
 
 
 def parse_args():
@@ -160,7 +158,8 @@ def plot_data_map(logger,
                   max_num_sample_plot=20000,
                   show_bound=False):
     # Set style.
-    sns.set(style='whitegrid', font_scale=1.6, context='paper')
+    sns.set(style='whitegrid', font_scale=3, context='paper')
+    plt.rcParams['axes.linewidth'] = 2
     logger.info(f'Plotting figure for {dataset_name} ...')
 
     dataframe = dataframe.sort_values('idx')
@@ -212,6 +211,12 @@ def plot_data_map(logger,
         style=style,
         alpha=0.3,
         s=30)
+
+    for ind, label in enumerate(plot.get_yticklabels()):
+        if ind % 2 == 0:  # every 10th label is kept
+            label.set_visible(True)
+        else:
+            label.set_visible(False)
 
     # Annotate Regions.
     def bb(c):
@@ -349,7 +354,7 @@ def main():
         train_dy_metrics.to_json(
             train_dy_filename, orient='records', lines=True)
         logger.info(f'Metrics for {args.split} data based on training'
-                    'dynamics written to {train_dy_filename}')
+                    f' dynamics written to {train_dy_filename}')
     else:
         logger.info(f'Read metrics for {args.split} data based on training '
                     'dynamics from {train_dy_filename}')
