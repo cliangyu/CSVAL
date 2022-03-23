@@ -67,7 +67,7 @@ def read_training_dynamics(
     Given path to logged training dynamics, merge stats across epochs.
     Returns:
     - Dict between ID of a train instances and its gold label,
-    and the list of cossim across epochs.
+    and the list of prob across epochs.
     """
     train_dynamics = {}
 
@@ -88,9 +88,9 @@ def read_training_dynamics(
                 idx = record[id_field]
                 if idx not in train_dynamics:
                     assert epoch_num == 0
-                    train_dynamics[idx] = {'cossim': []}
-                train_dynamics[idx]['cossim'].append(
-                    record[f'cossim_epoch_{epoch_num}'])
+                    train_dynamics[idx] = {'prob': []}
+                train_dynamics[idx]['prob'].append(
+                    record[f'prob_epoch_{epoch_num}'])
 
     logger.info(
         f'Read training dynamics for {len(train_dynamics)} {split} instances.')
@@ -99,7 +99,7 @@ def read_training_dynamics(
 
 def compute_train_dy_metrics(logger, training_dynamics, args):
     """
-    Given the training dynamics (cossim for each training
+    Given the training dynamics (prob for each training
     instance across epochs), compute metrics
     based on it, for data map coorodinates.
     Computed metrics are: confidence, variability
@@ -126,17 +126,17 @@ def compute_train_dy_metrics(logger, training_dynamics, args):
                 np.var(conf) + np.var(conf) * np.var(conf) / (len(conf) - 1))
 
     num_tot_epochs = np.max(
-        [len(record['cossim']) for record in training_dynamics.values()])
+        [len(record['prob']) for record in training_dynamics.values()])
     logger.info(f'Computing training dynamics across {num_tot_epochs} epochs')
     logger.info('Metrics computed: confidence, variability')
 
     for idx in tqdm(training_dynamics):
         record = training_dynamics[idx]
         # # skip examples that do not have training dynamics for all epochs
-        # if len(record['cossim']) < num_tot_epochs:
+        # if len(record['prob']) < num_tot_epochs:
         #     continue
-        confidence_[idx] = np.mean(record['cossim'])
-        variability_[idx] = variability_func(record['cossim'])
+        confidence_[idx] = np.mean(record['prob'])
+        variability_[idx] = variability_func(record['prob'])
 
     column_names = ['idx', 'confidence', 'variability']
     df = pd.DataFrame([[

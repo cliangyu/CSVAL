@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PORT=${PORT:-29500}
 
-declare -a StringArray=("path")
+declare -a StringArray=("path" "blood" "derma")
 declare -a METRICS=("easy" "ambiguous" "hard")
 
 for dataset in ${StringArray[@]}; do
@@ -39,6 +39,7 @@ for dataset in ${StringArray[@]}; do
         --max_num_sample_plot 40000 \
         --pool_type adaptive \
         --sorted_idx_file $IDX_FILE \
+        --plot_name "${dataset}_${metric}" \
         --launcher pytorch
 
     done

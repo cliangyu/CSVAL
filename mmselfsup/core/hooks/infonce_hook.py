@@ -2,15 +2,16 @@
 import os.path as osp
 
 import mmcv
+import numpy as np
 import pandas as pd
 from mmcv.runner import HOOKS, Hook
 
 
 @HOOKS.register_module()
-class CossimHook(Hook):
-    """Hook for logging cossim.
+class InfoNCEHook(Hook):
+    """Hook for logging InfoNCE prob.
 
-    This hook records cosine similarity between each sample's positive pair.
+    This hook records InfoNCE prob between each sample's positive pair.
     The similarity score will be saved in ``runner.work_dir``.
 
     Args:
@@ -22,7 +23,7 @@ class CossimHook(Hook):
         self.interval = interval
 
     def before_train_epoch(self, runner):
-        self.training_dynamics = dict(idx=[], cossim=[])
+        self.training_dynamics = dict(idx=[], prob=[])
 
     def after_train_iter(self, runner):
         for var_name, var_value in runner.model.module.training_dynamics.items(
@@ -30,28 +31,30 @@ class CossimHook(Hook):
             self.training_dynamics[var_name].extend(var_value)
 
     def after_train_epoch(self, runner):
+        logger = runner.logger
         if self.training_dynamics is not None and self.every_n_epochs(
                 runner, self.interval):
+            ids = np.repeat(self.training_dynamics['idx'], 2)
             self.log_training_dynamics(
                 output_dir=runner.work_dir,
                 epoch=runner.epoch,
-                ids=self.training_dynamics['idx'],
-                cossim=self.training_dynamics['cossim'],
-                logger=runner.logger,
+                ids=ids,
+                prob=self.training_dynamics['prob'],
+                logger=logger,
                 split='training')
 
     def log_training_dynamics(self,
                               output_dir,
                               epoch,
                               ids,
-                              cossim,
+                              prob,
                               logger,
                               split='training'):
-        """Save training dynamics (cossim) from given epoch as records of a
-        `.jsonl` file."""
+        """Save training dynamics (InfoNCE prob) from given epoch as records of
+        a `.jsonl` file."""
         td_df = pd.DataFrame({
             'idx': ids,
-            f'cossim_epoch_{epoch}': cossim,
+            f'prob_epoch_{epoch}': prob,
         })
 
         logging_dir = osp.join(output_dir, f'{split}_dynamics')

@@ -39,7 +39,7 @@ class MultiViewDataset(BaseDataset):
     def __init__(self, data_source, num_views, pipelines, prefetch=False):
         assert len(num_views) == len(pipelines)
         self.data_source = build_datasource(data_source)
-        self.CLASSES = self.data_source.classes
+        self.CLASSES = ['classes']  # only for repeat dataset
         self.pipelines = []
         for pipe in pipelines:
             pipeline = Compose([build_from_cfg(p, PIPELINES) for p in pipe])

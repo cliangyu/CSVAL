@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 PORT=${PORT:-29500}
 
-declare -a Dataset=("path" "derma" "blood")
-declare -a Metric=("ambiguity" "easy" "hard")
+declare -a Dataset=("path")
+declare -a Metric=("ambiguous" "easy" "hard")
 
 for dataset in ${Dataset[@]}; do
     for metric in ${Metric[@]}; do
-        CONFIG="configs/selfsup/simclr/simclr_resnet50_4xb1024-coslr-200e_${dataset}.py"
+        CONFIG="configs/selfsup/simclr/simclr_resnet50_2xb2048-coslr-200e_${dataset}.py"
         echo $CONFIG
-        CHECKPOINT="work_dirs/selfsup/simclr_resnet50_4xb1024-coslr-200e_${dataset}/latest.pth"
+        CHECKPOINT="work_dirs/selfsup/simclr_resnet50_2xb2048-coslr-200e_${dataset}/latest.pth"
         echo $CHECKPOINT
         DATASET_CONFIG="configs/benchmarks/classification/medmnist/${dataset}mnist.py"
         echo $DATASET_CONFIG
@@ -21,7 +21,7 @@ for dataset in ${Dataset[@]}; do
         --dataset_config $DATASET_CONFIG \
         --layer_ind 4 \
         --pool_type adaptive \
-        --max_num_sample_plot 20000 \
+        --max_num_sample_plot 100000 \
         --sorted_idx_file $SORTED_IDX_FILE \
         --plot_name "${dataset}_${metric}" \
         --launcher pytorch

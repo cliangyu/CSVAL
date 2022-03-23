@@ -30,4 +30,8 @@ lr_config = dict(
 # the max_keep_ckpts controls the max number of ckpt file in your work_dirs
 # if it is 3, when CheckpointHook (in mmcv) saves the 4th ckpt
 # it will remove the oldest one to keep the number of total ckpts as 3
-checkpoint_config = dict(interval=1, max_keep_ckpts=3)
+checkpoint_config = dict(interval=10, max_keep_ckpts=3)
+
+data = dict(
+    samples_per_gpu=64,  # total 32*8
+    workers_per_gpu=8)

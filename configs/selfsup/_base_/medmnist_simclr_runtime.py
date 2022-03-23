@@ -17,4 +17,4 @@ log_config = dict(
         dict(type='TensorboardLoggerHook'),
     ])
 
-custom_hooks = [dict(type='CossimHook')]
+custom_hooks = [dict(type='InfoNCEHook')]

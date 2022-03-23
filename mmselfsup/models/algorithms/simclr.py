@@ -84,13 +84,15 @@ class SimCLR(BaseModel):
         # remove diagonal, (2N)x(2N-1)
         s = torch.masked_select(s, mask == 1).reshape(s.size(0), -1)
         positive = s[pos_ind].unsqueeze(1)  # (2N)x1
-
-        self.training_dynamics = dict(
-            idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
-            cossim=torch.mean(s[pos_ind].reshape((-1, 2)),
-                              1).cpu().detach().numpy())
-
         # select negative, (2N)x(2N-2)
         negative = torch.masked_select(s, neg_mask == 1).reshape(s.size(0), -1)
+
+        # log the pro
+        logits = torch.cat((positive, negative), dim=1)
+        prob = torch.nn.functional.softmax(logits, dim=1)[:, 0]
+        self.training_dynamics = dict(
+            idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
+            prob=prob.cpu().detach().numpy())
+
         losses = self.head(positive, negative)
         return dict(loss=losses)

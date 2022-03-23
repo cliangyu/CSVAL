@@ -302,7 +302,7 @@ def main():
         plt.tight_layout()
         if args.plot_name is None:
             gt_label_plot_name = osp.join(f'{umap_work_dir}saved_pictures/',
-                                          '{key}_gt_labels.png')
+                                          f'{key}_gt_labels.png')
         else:
             gt_label_plot_name = osp.join(
                 f'{umap_work_dir}saved_pictures/',

@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .cossim_hook import CossimHook
 from .deepcluster_hook import DeepClusterHook
 from .densecl_hook import DenseCLHook
+from .infonce_hook import InfoNCEHook
 from .momentum_update_hook import MomentumUpdateHook
 from .odc_hook import ODCHook
 from .optimizer_hook import DistOptimizerHook, GradAccumFp16OptimizerHook
@@ -11,5 +11,5 @@ from .swav_hook import SwAVHook
 __all__ = [
     'MomentumUpdateHook', 'DeepClusterHook', 'DenseCLHook', 'ODCHook',
     'DistOptimizerHook', 'GradAccumFp16OptimizerHook', 'SimSiamHook',
-    'SwAVHook', 'CossimHook'
+    'SwAVHook', 'InfoNCEHook'
 ]
