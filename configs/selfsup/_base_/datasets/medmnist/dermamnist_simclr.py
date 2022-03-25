@@ -33,7 +33,7 @@ if not prefetch:
 # dataset summary
 data = dict(
     samples_per_gpu=2048,  # total 4096=2048*2
-    workers_per_gpu=16,
+    workers_per_gpu=8,
     train=dict(
         type='RepeatDataset',
         times=N,

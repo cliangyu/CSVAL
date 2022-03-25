@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 PORT=${PORT:-29500}
 
-declare -a StringArray=("path" "blood" "derma")
+# declare -a StringArray=("path" "blood" "derma")
+declare -a StringArray=("path" "blood")
 declare -a METRICS=("easy" "ambiguous" "hard")
 
 for dataset in ${StringArray[@]}; do
@@ -36,7 +37,7 @@ for dataset in ${StringArray[@]}; do
         --checkpoint $CHECKPOINT \
         --dataset_config $DATASET_CONFIG \
         --layer_ind 4 \
-        --max_num_sample_plot 40000 \
+        --max_num_sample_plot 100000 \
         --pool_type adaptive \
         --sorted_idx_file $IDX_FILE \
         --plot_name "${dataset}_${metric}" \
