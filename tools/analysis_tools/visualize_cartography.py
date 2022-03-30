@@ -41,6 +41,10 @@ def parse_args():
         default=25000,
         help='the maximum number of samples to plot.')
     parser.add_argument(
+        '--num_epochs',
+        type=int,
+        help='num of epochs to read from training dynamics.')
+    parser.add_argument(
         '--overwrite_train_dy',
         action='store_true',
         help='Whether to overwrite previously computed training dynamics')
@@ -62,6 +66,7 @@ def read_training_dynamics(
     work_dir,
     id_field='idx',
     split='training',
+    num_epochs=None,
 ):
     """
     Given path to logged training dynamics, merge stats across epochs.
@@ -72,10 +77,11 @@ def read_training_dynamics(
     train_dynamics = {}
 
     td_dir = osp.join(work_dir, f'{split}_dynamics')
-    num_epochs = len([
-        f for f in os.listdir(td_dir)
-        if os.path.isfile(os.path.join(td_dir, f))
-    ])
+    if num_epochs is None:
+        num_epochs = len([
+            f for f in os.listdir(td_dir)
+            if os.path.isfile(os.path.join(td_dir, f))
+        ])
 
     logger.info(f'Reading {num_epochs} files from {td_dir} ...')
     for epoch_num in tqdm(range(num_epochs)):
@@ -348,7 +354,8 @@ def main():
         training_dynamics = read_training_dynamics(
             logger=logger,
             work_dir=training_dynamics_work_dir,
-            split=args.split)
+            split=args.split,
+            num_epochs=args.num_epochs)
         train_dy_metrics = compute_train_dy_metrics(logger, training_dynamics,
                                                     args)
         train_dy_metrics.to_json(

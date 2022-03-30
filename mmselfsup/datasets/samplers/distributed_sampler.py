@@ -39,8 +39,16 @@ class DistributedSampler(_DistributedSampler):
                     size=(len(self.dataset), ),
                     generator=g).tolist()
             else:
-                indices = torch.randperm(
-                    len(self.dataset), generator=g).tolist()
+                if hasattr(self.dataset, '_ori_len'):
+                    # for repeat dataset
+                    indices = []
+                    for _ in range(self.dataset.times):
+                        _indices = torch.randperm(
+                            self.dataset._ori_len, generator=g).tolist()
+                        indices.extend(_indices)
+                else:
+                    indices = torch.randperm(
+                        len(self.dataset), generator=g).tolist()
         else:
             indices = torch.arange(len(self.dataset)).tolist()
 

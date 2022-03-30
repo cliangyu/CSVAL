@@ -89,6 +89,8 @@ class SimCLR(BaseModel):
 
         # log the pro
         logits = torch.cat((positive, negative), dim=1)
+        temperature = 0.001
+        logits /= temperature
         prob = torch.nn.functional.softmax(logits, dim=1)[:, 0]
         self.training_dynamics = dict(
             idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
