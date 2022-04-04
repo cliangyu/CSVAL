@@ -1,9 +1,12 @@
 # dataset settings
-data_source = 'BloodMNIST'
-N = 105
+data_source = 'OrganAMNIST'
+N = 37
 dataset_type = 'MultiViewDataset'
-img_norm_cfg = dict(mean=[.5, .5, .5], std=[.5, .5, .5])
+img_norm_cfg = dict(mean=[.5], std=[.5])
 
+# Big Self-Supervised Models
+# Advance Medical Image Classification,
+# CheXpert augmentation
 train_pipeline = [
     dict(type='RandomResizedCrop', size=28),
     dict(
@@ -17,8 +20,7 @@ train_pipeline = [
                 hue=0.1)
         ],
         p=0.8),
-    dict(type='RandomGrayscale', p=0.2),
-    dict(type='GaussianBlur', sigma_min=0.1, sigma_max=2.0, p=0.5),
+    dict(type='RandomRotation', degrees=45),
     dict(type='RandomHorizontalFlip'),
 ]
 
@@ -32,7 +34,7 @@ if not prefetch:
 # dataset summary
 data = dict(
     samples_per_gpu=2048,  # total 4096=2048*2
-    workers_per_gpu=8,
+    workers_per_gpu=16,
     train=dict(
         type='RepeatDataset',
         times=N,

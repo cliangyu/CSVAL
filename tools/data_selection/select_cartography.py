@@ -6,16 +6,12 @@ import matplotlib.pyplot as plt
 import mmcv
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from mmcv import Config
 
 from mmselfsup.apis import set_random_seed
 from mmselfsup.datasets import build_dataset
 from mmselfsup.utils import get_root_logger
-
-
-def check_best_patial(plist, num_train):
-    print('\n', len([int(num_train * i / 100000.0) for i in plist]))
-    print([int(num_train * i / 100000.0) for i in plist])
 
 
 def plot_class_dist(labels,
@@ -25,25 +21,27 @@ def plot_class_dist(labels,
                     title=None,
                     figsize=[40, 40],
                     ylim=(None, None)):
-    classes, counts = np.unique(labels, return_counts=True)
-    logger.info(f'class counts:{counts}')
-    df_rel = pd.DataFrame(columns=['classes', 'counts'])
-    df_rel['classes'], df_rel['counts'] = classes, counts
+    labels[labels == 0] = 1e-4
+    sns.set(style='whitegrid', font_scale=3, context='paper')
+    figsize = [25.4, 57.2]
     plt.rcParams['figure.figsize'] = figsize
     plt.rcParams['figure.autolayout'] = True
-    df_rel.plot(
-        x='classes',
-        y='counts',
-        kind='bar',
-        stacked=True,
-        title=title,
-        legend=None,
-        figsize=figsize,
-        colormap='Reds_r',
-        xlabel=None,
-        xticks=None,
-        width=0.9)
+    my_pal = [
+        '#e60049', '#0bb4ff', '#50e991', '#e6d800', '#9b19f5', '#ffa300',
+        '#dc0ab4', '#b3d4ff', '#00bfa0'
+    ]
+    num_unique_labels = len(labels)
+    pal = sns.color_palette(my_pal, n_colors=num_unique_labels)
+
+    ax = sns.barplot(  # noqa F841
+        y=list(map(str, np.arange(num_unique_labels))),
+        x=labels,
+        palette=pal,
+        ci=None,
+    )
+    # ax.bar_label(ax.containers[0]) # annotate the bars
     plt.gca().axes.get_xaxis().set_visible(False)
+    plt.gca().axes.get_yaxis().set_visible(False)
     plt.ylim(ylim)
     plt.savefig(
         osp.join(save_dir, f'p-0.{percentage}_distribution_histogram.png'))
@@ -76,12 +74,22 @@ def parse_args():
     return args
 
 
+def convert_array_to_cnt_array(ori_labels, num_classes):
+    unique, counts = np.unique(ori_labels, return_counts=True)
+    count_dict = dict(zip(unique, counts))
+    labels = np.zeros(num_classes)
+    for _class in count_dict.keys():
+        labels[_class] = count_dict[_class]
+    return labels
+
+
 def main():
     args = parse_args()
     # get pseudo labels
     cfg = Config.fromfile(args.config)
     if args.work_dir is not None:
         # update configs according to CLI args if args.work_dir is not None
+        work_type = args.config.split('/')[1]
         cfg.work_dir = args.work_dir
     elif cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
@@ -95,6 +103,14 @@ def main():
     dataset_cfg = mmcv.Config.fromfile(args.dataset_config)
     dataset = build_dataset(dataset_cfg.data.extract)
     gt_labels = dataset.data_source.get_gt_labels()
+    unique, counts = np.unique(gt_labels, return_counts=True)
+    num_real_classes = len(unique)
+    labels = convert_array_to_cnt_array(gt_labels, num_real_classes)
+    plot_dir = osp.join(cfg.work_dir, 'distribution_histogram_full')
+    mmcv.mkdir_or_exist(plot_dir)
+    # plot gt_label distribution
+    plot_class_dist(
+        labels=labels, percentage='1', logger=logger, save_dir=plot_dir)
 
     # set random seeds
     if args.seed is not None:
@@ -114,6 +130,7 @@ def main():
             './work_dirs', work_type,
             osp.splitext(osp.basename(args.config))[0], 'cartography',
             'training_td_metrics.jsonl')
+    logger.info(f'Load training dynamics from {args.training_dynamics}')
     training_dynamics = pd.read_json(
         path_or_buf=args.training_dynamics, lines=True)
     selection_df = training_dynamics.sort_values('idx')
@@ -143,10 +160,11 @@ def main():
             [i for i in range(10000, 100000, 5000)]
 
     num_train = len(dataset)
-    check_best_patial(plist, num_train)
     zfill = 5
     p = [str(i).zfill(zfill) for i in plist]
     num_select_list = [int(num_train * i / 100000.0) for i in plist]
+    logger.info(f'{len(num_select_list)} ratios will be selected.')
+    logger.info(num_select_list)
 
     # rank by metrics
     if args.metric == 'easy':
@@ -162,9 +180,9 @@ def main():
         raise ValueError('metric not supported')
 
     selection_df = selection_df.sort_values(metric, ascending=ascending)
-    plot_dir = osp.join(cfg.work_dir, 'distribution_histogram')
+    plot_dir = osp.join(cfg.work_dir, f'distribution_histogram_{args.metric}')
     mmcv.mkdir_or_exist(plot_dir)
-    sample_by_percentage_dir = osp.join(cfg.work_dir, 'sample_by_percentage')
+    sample_by_percentage_dir = osp.join(cfg.work_dir, f'sample_{args.metric}')
     mmcv.mkdir_or_exist(sample_by_percentage_dir)
 
     plt.rcParams.update({'figure.max_open_warning': 0})
@@ -205,9 +223,13 @@ def main():
         np.save(save_dir, indices)
         logger.info(f'{len(indices)} samples saved to {save_dir}')
 
+        labels = convert_array_to_cnt_array(
+            selection_df[selection_df.idx.isin(indices)]['gt_label'],
+            num_real_classes)
+
         # plot gt_label distribution
         plot_class_dist(
-            labels=selection_df[selection_df.idx.isin(indices)]['gt_label'],
+            labels=labels,
             percentage=percentage,
             logger=logger,
             save_dir=plot_dir)

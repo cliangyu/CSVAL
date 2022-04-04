@@ -87,14 +87,15 @@ class SimCLR(BaseModel):
         # select negative, (2N)x(2N-2)
         negative = torch.masked_select(s, neg_mask == 1).reshape(s.size(0), -1)
 
-        # log the pro
-        logits = torch.cat((positive, negative), dim=1)
-        temperature = 0.001
-        logits /= temperature
-        prob = torch.nn.functional.softmax(logits, dim=1)[:, 0]
-        self.training_dynamics = dict(
-            idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
-            prob=prob.cpu().detach().numpy())
+        # log the pos prob
+        with torch.no_grad():
+            logits = torch.cat((positive, negative), dim=1)
+            temperature = 0.01
+            logits /= temperature
+            prob = torch.nn.functional.softmax(logits, dim=1)[:, 0]
+            self.training_dynamics = dict(
+                idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
+                prob=prob.cpu().detach().numpy())
 
         losses = self.head(positive, negative)
         return dict(loss=losses)

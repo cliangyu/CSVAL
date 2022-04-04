@@ -1,7 +1,9 @@
-# dataset settings
 data_source = 'ImageNet'
-dataset_type = 'MultiViewDataset'
+split = 'train'
+dataset_type = 'SingleViewDataset'
+name = f'{data_source.lower()}_LT_{split}'
 img_norm_cfg = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
 train_pipeline = [
     dict(type='RandomResizedCrop', size=224),
     dict(type='RandomHorizontalFlip'),
@@ -29,7 +31,7 @@ if not prefetch:
 
 # dataset summary
 data = dict(
-    samples_per_gpu=256,  # total 256*2
+    samples_per_gpu=128,  # total 128*2
     workers_per_gpu=16,
     train=dict(
         type=dataset_type,

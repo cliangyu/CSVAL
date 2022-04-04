@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 PORT=${PORT:-53256}
 
-export CUDA_VISIBLE_DEVICES=2,3
+export CUDA_VISIBLE_DEVICES=0,1
 
-declare -a StringArray=("derma")
+declare -a StringArray=("blood")
 
 for dataset in ${StringArray[@]}; do
     CONFIG="configs/selfsup/simclr/simclr_resnet50_2xb2048-coslr-200e_${dataset}.py"
+    # CONFIG="configs/selfsup/mocov2/mocov2_resnet50_1xb512-coslr-200e_${dataset}.py"
+    # CONFIG="configs/selfsup/simclr/simclr_resnet50_4xb128-coslr-200e_inlt.py"
     echo $CONFIG
 
     python -m torch.distributed.run --nproc_per_node=2 --master_port=$PORT \

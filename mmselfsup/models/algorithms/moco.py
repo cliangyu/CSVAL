@@ -141,9 +141,55 @@ class MoCo(BaseModel):
         # negative logits: NxK
         l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()])
 
+        # log the pos prob
+        with torch.no_grad():
+            # # Another implementation: compare with memory bank
+            # neg_num = 4096
+            # rand_idx = torch.randperm(self.queue.size(1))[:neg_num]
+            # rand_neg_feature = self.queue.clone().detach()[:, rand_idx]
+            # rand_neg = torch.einsum('nc,ck->nk', [q, rand_neg_feature])
+            # logits = torch.cat((l_pos, rand_neg), dim=1)
+
+            z = torch.cat((q, k), 1).reshape((-1, q.size(1)))
+            assert z.size(0) % 2 == 0
+            N = z.size(0) // 2
+            s = torch.matmul(z, z.permute(1, 0))  # (2N)x(2N)
+            mask, pos_ind, neg_mask = self._create_buffer(N)
+            # remove diagonal, (2N)x(2N-1)
+            s = torch.masked_select(s, mask == 1).reshape(s.size(0), -1)
+            positive = s[pos_ind].unsqueeze(1)  # (2N)x1
+            # select negative, (2N)x(2N-2)
+            negative = torch.masked_select(s, neg_mask == 1).reshape(
+                s.size(0), -1)
+
+            logits = torch.cat((positive, negative), dim=1)
+            # temperature = self.head.temperature
+            temperature = 0.01
+            logits /= temperature
+            prob = torch.nn.functional.softmax(logits, dim=1)[:, 0]
+            self.training_dynamics = dict(
+                # idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
+                idx=kwargs['idx'].cpu().detach().numpy(),
+                prob=prob.cpu().detach().numpy())
+
         losses = self.head(l_pos, l_neg)
 
         # update the queue
         self._dequeue_and_enqueue(k)
 
         return losses
+
+    @staticmethod
+    def _create_buffer(N):
+        """Compute the mask and the index of positive samples.
+
+        Args:
+            N (int): batch size.
+        """
+        mask = 1 - torch.eye(N * 2, dtype=torch.uint8).cuda()
+        pos_ind = (torch.arange(N * 2).cuda(),
+                   2 * torch.arange(N, dtype=torch.long).unsqueeze(1).repeat(
+                       1, 2).view(-1, 1).squeeze().cuda())
+        neg_mask = torch.ones((N * 2, N * 2 - 1), dtype=torch.uint8).cuda()
+        neg_mask[pos_ind] = 0
+        return mask, pos_ind, neg_mask

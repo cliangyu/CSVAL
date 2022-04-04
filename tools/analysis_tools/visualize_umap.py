@@ -107,6 +107,7 @@ def main():
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:
         # update configs according to CLI args if args.work_dir is not None
+        work_type = args.config.split('/')[1]
         cfg.work_dir = args.work_dir
     elif cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
@@ -260,7 +261,7 @@ def main():
                                       indices)][:args.num_selected_sample]
 
     for key, val in features.items():
-        output_file = osp.join(f'{umap_work_dir}features',
+        output_file = osp.join(f'{umap_work_dir}', 'features',
                                f'{dataset_cfg.name}_{key}_umap.npy')
         if osp.isfile(output_file):
             result = np.load(output_file)
@@ -301,11 +302,11 @@ def main():
         ax.axes.yaxis.set_visible(False)
         plt.tight_layout()
         if args.plot_name is None:
-            gt_label_plot_name = osp.join(f'{umap_work_dir}saved_pictures/',
+            gt_label_plot_name = osp.join(f'{umap_work_dir}', 'saved_pictures',
                                           f'{key}_gt_labels.png')
         else:
             gt_label_plot_name = osp.join(
-                f'{umap_work_dir}saved_pictures/',
+                f'{umap_work_dir}', 'saved_pictures',
                 f'{key}_{args.plot_name}_gt_labels.png')
         plt.savefig(gt_label_plot_name)
 
@@ -341,13 +342,15 @@ def main():
         ax.axes.yaxis.set_visible(False)
         plt.tight_layout()
         plt.savefig(
-            f'{umap_work_dir}saved_pictures/{key}_kmeans_psuedo_labels.png')
+            osp.join(f'{umap_work_dir}',
+                     f'saved_pictures/{key}_kmeans_psuedo_labels.png'))
         if args.plot_name is None:
-            psuedo_label_plot_name = osp.join(
-                f'{umap_work_dir}saved_pictures/', f'{key}_pseudo_labels.png')
+            psuedo_label_plot_name = osp.join(f'{umap_work_dir}',
+                                              'saved_pictures',
+                                              f'{key}_pseudo_labels.png')
         else:
             psuedo_label_plot_name = osp.join(
-                f'{umap_work_dir}saved_pictures/',
+                f'{umap_work_dir}', 'saved_pictures',
                 f'{key}_{args.plot_name}_pseudo_labels.png')
         plt.savefig(psuedo_label_plot_name)
     logger.info(f'Saved results to {umap_work_dir}saved_pictures/')

@@ -329,6 +329,7 @@ def main():
 
     if args.work_dir is not None:
         # update configs according to CLI args if args.work_dir is not None
+        work_type = args.config.split('/')[1]
         cfg.work_dir = args.work_dir
     elif cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
@@ -348,9 +349,7 @@ def main():
     train_dy_filename = osp.join(cfg.work_dir,
                                  f'{args.split}_td_metrics.jsonl')
     if args.overwrite_train_dy or not os.path.exists(train_dy_filename):
-        training_dynamics_work_dir = osp.join(
-            './work_dirs', work_type,
-            osp.splitext(osp.basename(args.config))[0])
+        training_dynamics_work_dir = osp.dirname(cfg.work_dir)
         training_dynamics = read_training_dynamics(
             logger=logger,
             work_dir=training_dynamics_work_dir,

@@ -34,7 +34,11 @@ class InfoNCEHook(Hook):
         logger = runner.logger
         if self.training_dynamics is not None and self.every_n_epochs(
                 runner, self.interval):
-            ids = np.repeat(self.training_dynamics['idx'], 2)
+            if len(self.training_dynamics['idx']) == len(
+                    self.training_dynamics['prob']):  # for MoCo
+                ids = self.training_dynamics['idx']
+            else:
+                ids = np.repeat(self.training_dynamics['idx'], 2)  # for SimCLR
             self.log_training_dynamics(
                 output_dir=runner.work_dir,
                 epoch=runner.epoch,

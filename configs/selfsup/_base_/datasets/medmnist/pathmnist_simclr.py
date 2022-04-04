@@ -3,24 +3,23 @@ data_source = 'PathMNIST'
 N = 14
 dataset_type = 'MultiViewDataset'
 img_norm_cfg = dict(mean=[.5, .5, .5], std=[.5, .5, .5])
-color_jitter_strength = 0.5
 
 train_pipeline = [
     dict(type='RandomResizedCrop', size=28),
-    dict(type='RandomHorizontalFlip'),
-    dict(type='RandomRotation', degrees=45),
     dict(
         type='RandomAppliedTrans',
         transforms=[
             dict(
                 type='ColorJitter',
-                brightness=0.8 * color_jitter_strength,
-                contrast=0.8 * color_jitter_strength,
-                saturation=0.8 * color_jitter_strength,
-                hue=0.2 * color_jitter_strength)
+                brightness=0.4,
+                contrast=0.4,
+                saturation=0.4,
+                hue=0.1)
         ],
         p=0.8),
     dict(type='RandomGrayscale', p=0.2),
+    dict(type='GaussianBlur', sigma_min=0.1, sigma_max=2.0, p=0.5),
+    dict(type='RandomHorizontalFlip'),
 ]
 
 # prefetch
