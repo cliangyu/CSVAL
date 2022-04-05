@@ -32,12 +32,19 @@ class ExtractProcess(object):
     def _forward_func(self, model, **x):
         """The forward function of extract process."""
         backbone_feats = model(mode='extract', **x)
-        pooling_feats = self.multi_pooling(backbone_feats)
-        flat_feats = [xx.view(xx.size(0), -1) for xx in pooling_feats]
-        feat_dict = {
-            f'feat{self.layer_indices[i] + 1}': feat.cpu()
-            for i, feat in enumerate(flat_feats)
-        }
+        # if feature H and W == 1, skip pooling
+        if len(backbone_feats[0].squeeze().shape) == 2:
+            feat_dict = {
+                f'feat{self.layer_indices[i] + 1}': feat.squeeze().cpu()
+                for i, feat in enumerate(backbone_feats)
+            }
+        else:
+            pooling_feats = self.multi_pooling(backbone_feats)
+            flat_feats = [xx.view(xx.size(0), -1) for xx in pooling_feats]
+            feat_dict = {
+                f'feat{self.layer_indices[i] + 1}': feat.cpu()
+                for i, feat in enumerate(flat_feats)
+            }
         return feat_dict
 
     def extract(self, model, data_loader, distributed=False):
