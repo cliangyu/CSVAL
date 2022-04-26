@@ -21,31 +21,38 @@ class InfoNCEHook(Hook):
 
     def __init__(self, interval=1, **kwargs):
         self.interval = interval
+        self.temperature_list = [0.2, 0.1, 0.05, 0.01]
 
     def before_train_epoch(self, runner):
-        self.training_dynamics = dict(idx=[], prob=[])
+        self.training_dynamics = {}
+        for temperature in self.temperature_list:
+            self.training_dynamics[temperature] = dict(idx=[], prob=[])
 
     def after_train_iter(self, runner):
-        for var_name, var_value in runner.model.module.training_dynamics.items(
-        ):
-            self.training_dynamics[var_name].extend(var_value)
+        for temperature in self.temperature_list:
+            for var_name, var_value in runner.model.module.training_dynamics[
+                    temperature].items():
+                self.training_dynamics[temperature][var_name].extend(var_value)
 
     def after_train_epoch(self, runner):
         logger = runner.logger
         if self.training_dynamics is not None and self.every_n_epochs(
                 runner, self.interval):
-            if len(self.training_dynamics['idx']) == len(
-                    self.training_dynamics['prob']):  # for MoCo
-                ids = self.training_dynamics['idx']
-            else:
-                ids = np.repeat(self.training_dynamics['idx'], 2)  # for SimCLR
-            self.log_training_dynamics(
-                output_dir=runner.work_dir,
-                epoch=runner.epoch,
-                ids=ids,
-                prob=self.training_dynamics['prob'],
-                logger=logger,
-                split='training')
+            for temperature in self.temperature_list:
+                training_dynamics = self.training_dynamics[temperature]
+                if len(training_dynamics['idx']) == len(
+                        training_dynamics['prob']):  # for MoCo
+                    ids = training_dynamics['idx']
+                else:
+                    ids = np.repeat(training_dynamics['idx'], 2)  # for SimCLR
+                self.log_training_dynamics(
+                    output_dir=runner.work_dir,
+                    epoch=runner.epoch,
+                    ids=ids,
+                    prob=training_dynamics['prob'],
+                    logger=logger,
+                    split='training',
+                    temperature=temperature)
 
     def log_training_dynamics(self,
                               output_dir,
@@ -53,7 +60,8 @@ class InfoNCEHook(Hook):
                               ids,
                               prob,
                               logger,
-                              split='training'):
+                              split='training',
+                              temperature=0.01):
         """Save training dynamics (InfoNCE prob) from given epoch as records of
         a `.jsonl` file."""
         td_df = pd.DataFrame({
@@ -61,7 +69,8 @@ class InfoNCEHook(Hook):
             f'prob_epoch_{epoch}': prob,
         })
 
-        logging_dir = osp.join(output_dir, f'{split}_dynamics')
+        logging_dir = osp.join(output_dir, f'{split}_dynamics',
+                               str(temperature))
         # create directory for logging training dynamics
         mmcv.mkdir_or_exist(logging_dir)
         epoch_file_name = osp.join(logging_dir,

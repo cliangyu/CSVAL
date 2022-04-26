@@ -145,7 +145,7 @@ def main():
             [i for i in range(1000, 10000, 500)] + \
             [i for i in range(10000, 100000, 5000)]
     elif dataset_name in [
-            'organmnist', 'pneumoniamnist', 'bloodmnist', 'dermamnist'
+            'organamnist', 'pneumoniamnist', 'bloodmnist', 'dermamnist'
     ]:
         plist = [i for i in range(100, 1000, 100)] + \
             [i for i in range(1000, 10000, 1000)] + \

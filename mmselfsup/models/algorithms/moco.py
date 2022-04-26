@@ -164,13 +164,17 @@ class MoCo(BaseModel):
 
             logits = torch.cat((positive, negative), dim=1)
             # temperature = self.head.temperature
-            temperature = 0.01
-            logits /= temperature
-            prob = torch.nn.functional.softmax(logits, dim=1)[:, 0]
-            self.training_dynamics = dict(
-                # idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
-                idx=kwargs['idx'].cpu().detach().numpy(),
-                prob=prob.cpu().detach().numpy())
+            self.temperature_list = [0.2, 0.1, 0.05, 0.01]
+            idx = kwargs['idx'].cpu().detach().numpy()
+            self.training_dynamics = {}
+            for temperature in self.temperature_list:
+                logits /= temperature
+                prob = torch.nn.functional.softmax(logits, dim=1)[:, 0]
+                self.training_dynamics[temperature] = dict(
+                    # idx=concat_all_gather(kwargs['idx']).cpu().detach().numpy(),
+                    idx=idx,
+                    prob=prob.cpu().detach().numpy(),
+                )
 
         losses = self.head(l_pos, l_neg)
 

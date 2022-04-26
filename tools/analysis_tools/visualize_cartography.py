@@ -7,9 +7,9 @@ import os.path as osp
 import matplotlib.pyplot as plt
 import mmcv
 import numpy as np
+import orjson as json
 import pandas as pd
 import seaborn as sns
-import ujson as json
 from mmcv import Config
 from tqdm import tqdm
 
@@ -30,6 +30,11 @@ def parse_args():
         type=str,
         default='training',
         help='Dataset split whose training dynamics to read')
+    parser.add_argument(
+        '--temperature',
+        type=float,
+        default='0.01',
+        help='Temperature of softmax at calculating cartography')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument(
         '--dataset_config',
@@ -62,6 +67,7 @@ def parse_args():
 
 
 def read_training_dynamics(
+    args,
     logger,
     work_dir,
     id_field='idx',
@@ -76,7 +82,8 @@ def read_training_dynamics(
     """
     train_dynamics = {}
 
-    td_dir = osp.join(work_dir, f'{split}_dynamics')
+    td_dir = osp.join(work_dir, f'{split}_dynamics',
+                      f'{str(args.temperature)}')
     if num_epochs is None:
         num_epochs = len([
             f for f in os.listdir(td_dir)
@@ -93,7 +100,7 @@ def read_training_dynamics(
                 record = json.loads(line.strip())
                 idx = record[id_field]
                 if idx not in train_dynamics:
-                    assert epoch_num == 0
+                    # assert epoch_num == 0
                     train_dynamics[idx] = {'prob': []}
                 train_dynamics[idx]['prob'].append(
                     record[f'prob_epoch_{epoch_num}'])
@@ -154,7 +161,8 @@ def compute_train_dy_metrics(logger, training_dynamics, args):
     return df.sort_values('idx')
 
 
-def plot_data_map(logger,
+def plot_data_map(args,
+                  logger,
                   dataframe,
                   plot_dir,
                   dataset_name,
@@ -311,7 +319,10 @@ def plot_data_map(logger,
         plot2.tick_params(axis='x', rotation=60)
 
     fig.tight_layout()
-    filename = f'{plot_dir}/{dataset_name}_pseudo_label.png'
+    filename = osp.join(
+        f'{plot_dir}',
+        f'{dataset_name}_{str(args.temperature)}_pseudo_label.png'
+    )  # noqa E501
     fig.savefig(filename)
     logger.info(f'Plot saved to {filename}')
     fig.show()
@@ -346,11 +357,12 @@ def main():
         set_random_seed(args.seed)
 
     # extract metrics
-    train_dy_filename = osp.join(cfg.work_dir,
-                                 f'{args.split}_td_metrics.jsonl')
+    train_dy_filename = osp.join(
+        cfg.work_dir, f'{args.split}_{str(args.temperature)}_td_metrics.jsonl')
     if args.overwrite_train_dy or not os.path.exists(train_dy_filename):
         training_dynamics_work_dir = osp.dirname(cfg.work_dir)
         training_dynamics = read_training_dynamics(
+            args=args,
             logger=logger,
             work_dir=training_dynamics_work_dir,
             split=args.split,
@@ -363,11 +375,12 @@ def main():
                     f' dynamics written to {train_dy_filename}')
     else:
         logger.info(f'Read metrics for {args.split} data based on training '
-                    'dynamics from {train_dy_filename}')
+                    f'dynamics from {train_dy_filename}')
         train_dy_metrics = pd.read_json(train_dy_filename, lines=True)
 
     # plot cartography
     plot_data_map(
+        args,
         logger,
         train_dy_metrics,
         cfg.work_dir,

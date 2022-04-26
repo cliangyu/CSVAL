@@ -15,12 +15,12 @@ from matplotlib.colors import ListedColormap
 from mmcv import Config, DictAction
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import get_dist_info, init_dist, load_checkpoint
+from sklearn.cluster import KMeans
 
 from mmselfsup.apis import set_random_seed
 from mmselfsup.datasets import build_dataloader, build_dataset
 from mmselfsup.models import build_algorithm
 from mmselfsup.models.utils import ExtractProcess
-from mmselfsup.utils import clustering as _clustering
 from mmselfsup.utils import get_root_logger
 
 
@@ -68,6 +68,18 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument(
         '--sorted_idx_file', type=str, help='sorted idx .npy file.')
+    parser.add_argument(
+        '--no_point_selected',
+        action='store_true',
+        help='plot all the points, no point selected.')
+    parser.add_argument(
+        '--overwrite_features',
+        action='store_true',
+        help='whether to overwrite features.')
+    parser.add_argument(
+        '--overwrite_pseudo_label',
+        action='store_true',
+        help='whether to overwrite pseudo labels.')
     parser.add_argument(
         '--plot_name', type=str, help='file name of the saved plots.')
     parser.add_argument(
@@ -151,7 +163,8 @@ def main():
     dataset.data_source.data_infos = tmp_infos
 
     # extract features
-    if osp.isfile(f'{umap_work_dir}features/features.pkl'):
+    if osp.isfile(f'{umap_work_dir}features/features.pkl'
+                  ) and not args.overwrite_features:
         with open(f'{umap_work_dir}features/features.pkl', 'rb') as f:
             features = pickle.load(f)
     else:
@@ -221,18 +234,17 @@ def main():
 
     # clustering
     if osp.isfile(
-            f'{umap_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy'):
+            f'{umap_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy'
+    ) and not args.overwrite_pseudo_label:
         clustering_pseudo_labels = np.load(
             f'{umap_work_dir}clustering_pseudo_labels/{dataset_cfg.name}.npy')
     else:
-        clustering = dict(type='Kmeans', k=args.k, pca_dim=256)
-        clustering_algo = _clustering.__dict__[clustering.pop('type')](
-            **clustering)
         logger.info('Running clustering......')
         # Features are normalized during clustering
-        clustering_algo.cluster(features['feat5'], verbose=True)
-        assert isinstance(clustering_algo.labels, np.ndarray)
-        clustering_pseudo_labels = clustering_algo.labels.astype(np.int64)
+        kmeans = KMeans(args.k, random_state=0)
+        reducer = umap.UMAP()
+        result = reducer.fit_transform(features['feat5'])
+        clustering_pseudo_labels = kmeans.fit(result).predict(result)
         # save clustering_pseudo_labels
         mmcv.mkdir_or_exist(f'{umap_work_dir}clustering_pseudo_labels/')
         output_file = \
@@ -255,7 +267,7 @@ def main():
     # calculate sorted index
     if args.sorted_idx_file is None:
         args.sorted_idx_file = osp.join(umap_work_dir, 'data_selection',
-                                        f'{dataset_name}_sorted_idx.npy')
+                                        f'{dataset_name}_easy_sorted_idx.npy')
     sorted_idx = np.load(args.sorted_idx_file)
     selected_idx = sorted_idx[np.isin(sorted_idx,
                                       indices)][:args.num_selected_sample]
@@ -263,7 +275,7 @@ def main():
     for key, val in features.items():
         output_file = osp.join(f'{umap_work_dir}', 'features',
                                f'{dataset_cfg.name}_{key}_umap.npy')
-        if osp.isfile(output_file):
+        if osp.isfile(output_file) and not args.overwrite_features:
             result = np.load(output_file)
         else:
             result = reducer.fit_transform(val)
@@ -279,24 +291,34 @@ def main():
         pal = ListedColormap(
             sns.color_palette(my_pal,
                               n_colors=len(np.unique(gt_labels))).as_hex())
-        # plot round scatter plot for unselected samples
-        plt.scatter(
-            res_norm[np.setdiff1d(indices, selected_idx), 0],
-            res_norm[np.setdiff1d(indices, selected_idx), 1],
-            alpha=0.2,
-            s=15,
-            c=gt_labels[np.setdiff1d(indices, selected_idx)],
-            cmap=pal)
-        # plot cross scatter plot for selected samples
-        plt.scatter(
-            res_norm[selected_idx, 0],
-            res_norm[selected_idx, 1],
-            alpha=1.0,
-            s=500,
-            marker='X',
-            edgecolors='black',
-            c=gt_labels[selected_idx],
-            cmap=pal)
+        if args.no_point_selected:
+            plt.scatter(
+                res_norm[indices, 0],
+                res_norm[indices, 1],
+                alpha=0.2,
+                s=15,
+                c=gt_labels[indices],
+                cmap=pal)
+        else:
+            # plot round scatter plot for unselected samples
+            plt.scatter(
+                res_norm[np.setdiff1d(indices, selected_idx), 0],
+                res_norm[np.setdiff1d(indices, selected_idx), 1],
+                alpha=0.2,
+                s=15,
+                c=gt_labels[np.setdiff1d(indices, selected_idx)],
+                cmap=pal)
+            # plot cross scatter plot for selected samples
+            plt.scatter(
+                res_norm[selected_idx, 0],
+                res_norm[selected_idx, 1],
+                alpha=1.0,
+                s=500,
+                marker='X',
+                edgecolors='black',
+                c=gt_labels[selected_idx],
+                cmap=pal)
+
         ax = plt.gca()
         ax.axes.xaxis.set_visible(False)
         ax.axes.yaxis.set_visible(False)
@@ -322,21 +344,31 @@ def main():
             colors.append(tuple(c))
         dark_cmap = matplotlib.colors.ListedColormap(colors, name='dark')
         plt.figure(figsize=(10, 10))
-        plt.scatter(
-            res_norm[np.setdiff1d(indices, selected_idx), 0],
-            res_norm[np.setdiff1d(indices, selected_idx), 1],
-            alpha=1.0,
-            s=15,
-            c=clustering_pseudo_labels[np.setdiff1d(indices, selected_idx)],
-            cmap=light_cmap)
-        plt.scatter(
-            res_norm[selected_idx, 0],
-            res_norm[selected_idx, 1],
-            alpha=1.0,
-            s=30,
-            marker='X',
-            c=clustering_pseudo_labels[selected_idx],
-            cmap=dark_cmap)
+        if args.no_point_selected:
+            plt.scatter(
+                res_norm[indices, 0],
+                res_norm[indices, 1],
+                alpha=0.2,
+                s=15,
+                c=clustering_pseudo_labels[indices],
+                cmap=light_cmap)
+        else:
+            plt.scatter(
+                res_norm[np.setdiff1d(indices, selected_idx), 0],
+                res_norm[np.setdiff1d(indices, selected_idx), 1],
+                alpha=1.0,
+                s=15,
+                c=clustering_pseudo_labels[np.setdiff1d(indices,
+                                                        selected_idx)],
+                cmap=light_cmap)
+            plt.scatter(
+                res_norm[selected_idx, 0],
+                res_norm[selected_idx, 1],
+                alpha=1.0,
+                s=500,
+                marker='X',
+                c=clustering_pseudo_labels[selected_idx],
+                cmap=dark_cmap)
         ax = plt.gca()
         ax.axes.xaxis.set_visible(False)
         ax.axes.yaxis.set_visible(False)
