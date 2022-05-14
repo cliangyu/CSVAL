@@ -4,6 +4,7 @@ import math
 import os
 import os.path as osp
 
+import matplotlib
 import matplotlib.pyplot as plt
 import mmcv
 import numpy as np
@@ -172,7 +173,7 @@ def plot_data_map(args,
                   max_num_sample_plot=20000,
                   show_bound=False):
     # Set style.
-    sns.set(style='whitegrid', font_scale=3, context='paper')
+    sns.set(style='whitegrid', font_scale=4, context='paper')
     plt.rcParams['axes.linewidth'] = 2
     logger.info(f'Plotting figure for {dataset_name} ...')
 
@@ -202,15 +203,16 @@ def plot_data_map(args,
     style = None
 
     if not show_hist:
-        fig, ax0 = plt.subplots(1, 1, figsize=(8, 12))
+        fig, ax0 = plt.subplots(1, 1, figsize=(7.08, 9.9))
     else:
-        fig = plt.figure(figsize=(14, 10), )
+        fig = plt.figure(figsize=(14, 10))
         gs = fig.add_gridspec(3, 2, width_ratios=[5, 1])
         ax0 = fig.add_subplot(gs[:, 0])
+    ax0.set_ylim(bottom=0)
 
     my_pal = [
         '#e60049', '#0bb4ff', '#50e991', '#e6d800', '#9b19f5', '#ffa300',
-        '#dc0ab4', '#b3d4ff', '#00bfa0'
+        '#dc0ab4', '#b3d4ff', '#00bfa0', '#fdcce5', '#1a53ff'
     ]
     pal = sns.color_palette(my_pal, n_colors=num_hues)
 
@@ -226,11 +228,9 @@ def plot_data_map(args,
         alpha=0.3,
         s=30)
 
-    for ind, label in enumerate(plot.get_yticklabels()):
-        if ind % 2 == 0:  # every 10th label is kept
-            label.set_visible(True)
-        else:
-            label.set_visible(False)
+    locator = matplotlib.ticker.MaxNLocator(
+        nbins=5)  # with 3 bins you will have 4 ticks
+    ax0.yaxis.set_major_locator(locator)
 
     # Annotate Regions.
     def bb(c):
@@ -241,16 +241,16 @@ def plot_data_map(args,
             text,
             xy=xyc,
             xycoords='axes fraction',
-            fontsize=15,
+            fontsize=25,
             color='black',
             va='center',
             ha='center',
             rotation=350,
             bbox=bb(bbc))
 
-    _ = func_annotate('ambiguous', xyc=(0.9, 0.5), bbc='white')
-    _ = func_annotate('easy-to-learn', xyc=(0.27, 0.85), bbc='white')
-    _ = func_annotate('hard-to-learn', xyc=(0.35, 0.25), bbc='white')
+    # _ = func_annotate('ambiguous', xyc=(0.9, 0.5), bbc='white')
+    # _ = func_annotate('easy-to-contrast', xyc=(0.40, 0.85), bbc='white')
+    # _ = func_annotate('hard-to-contrast', xyc=(0.35, 0.25), bbc='white')
     if show_bound:
 
         def bound(conf):
@@ -318,7 +318,7 @@ def plot_data_map(args,
         plot2.set_ylabel('density')
         plot2.tick_params(axis='x', rotation=60)
 
-    fig.tight_layout()
+    fig.tight_layout(pad=0.1)
     filename = osp.join(
         f'{plot_dir}',
         f'{dataset_name}_{str(args.temperature)}_pseudo_label.png'
