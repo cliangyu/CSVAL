@@ -271,8 +271,9 @@ def plot_data_map(args,
         # sorted_handles = np.array(handles)[alphabetical_order]
         # sorted_labels = np.array(labels)[alphabetical_order]
         # plot.legend(sorted_handles, sorted_labels,
-        #             fancybox=True, shadow=True,  ncol=2,
+        #             fancybox=True, shadow=True,  ncol=1,
         #             loc='upper center',
+        #             fontsize=5,
         #             bbox_to_anchor=(0.5, -0.05),
         #             )
         leg = plt.legend()

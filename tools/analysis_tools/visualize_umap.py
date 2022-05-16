@@ -295,7 +295,7 @@ def main():
             plt.scatter(
                 res_norm[indices, 0],
                 res_norm[indices, 1],
-                alpha=0.2,
+                alpha=0.1,
                 s=15,
                 c=gt_labels[indices],
                 cmap=pal)
@@ -304,7 +304,7 @@ def main():
             plt.scatter(
                 res_norm[np.setdiff1d(indices, selected_idx), 0],
                 res_norm[np.setdiff1d(indices, selected_idx), 1],
-                alpha=0.2,
+                alpha=0.1,
                 s=15,
                 c=gt_labels[np.setdiff1d(indices, selected_idx)],
                 cmap=pal)
@@ -315,6 +315,7 @@ def main():
                 alpha=1.0,
                 s=500,
                 marker='X',
+                linewidth=3,
                 edgecolors='black',
                 c=gt_labels[selected_idx],
                 cmap=pal)
@@ -348,7 +349,7 @@ def main():
             plt.scatter(
                 res_norm[indices, 0],
                 res_norm[indices, 1],
-                alpha=0.2,
+                alpha=0.1,
                 s=15,
                 c=clustering_pseudo_labels[indices],
                 cmap=light_cmap)
@@ -367,6 +368,7 @@ def main():
                 alpha=1.0,
                 s=500,
                 marker='X',
+                linewidth=3,
                 c=clustering_pseudo_labels[selected_idx],
                 cmap=dark_cmap)
         ax = plt.gca()

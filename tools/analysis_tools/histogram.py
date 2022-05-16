@@ -15,17 +15,17 @@ ax = fig.add_subplot(111)
 
 N = 6
 xTickMarks = [
-    'PathMNIST\n0.1%', 'PathMNIST\n1%', 'BloodMNIST\n0.5%', 'BloodMNIST\n1%',
-    'OrganAMNIST\n0.5%', 'OrganAMNIST\n0.7%'
+    'PathMNIST\n0.2%', 'PathMNIST\n0.5%', 'BloodMNIST\n0.2%',
+    'BloodMNIST\n0.5%', 'OrganAMNIST\n0.2%', 'OrganAMNIST\n0.5%'
 ]
-easy_learn_means = [91.2, 97.4, 92.3, 94.7, 27, 32]
-easy_learn_std = [0.6, 0.4, 0.1, 0.1, 2, 5]
-hard_learn_means = [59.2, 60.7, 63.8, 74.3, 25, 34]
-hard_learn_std = [0.3, 2.8, 1.1, 1.1, 3, 4]
-easy_contrast_means = [85.1, 94.1, 83.3, 93.6, 83.5, 85.8]
-easy_contrast_std = [0.5, 0.3, 2.5, 0.7, 0.9, 1.3]
-hard_contrast_means = [94.1, 96.2, 92.7, 94.0, 86.6, 89.1]
-hard_contrast_std = [1.0, 0.3, 0.1, 0.3, 0.3, 0.3]
+easy_learn_means = [94.0, 96.2, 88.6, 92.3, 84.8, 88.9]
+easy_learn_std = [0.0, 0.0, 2.1, 0.1, 0.9, 0.3]
+hard_learn_means = [58.7, 62.5, 57.5, 63.8, 66.8, 72.6]
+hard_learn_std = [2.8, 0.4, 0.2, 1.1, 1.9, 1.3]
+easy_contrast_means = [91.4, 94.4, 76.7, 83.3, 80.6, 83.5]
+easy_contrast_std = [0.1, 1.1, 1.5, 2.5, 1.1, 0.9]
+hard_contrast_means = [94.8, 95.9, 90.3, 92.7, 85.8, 86.6]
+hard_contrast_std = [0.8, 0.7, 0.1, 0.1, 0.3, 0.3]
 
 ind = np.arange(N)  # the x locations for the groups
 width = 0.15  # the width of the bars
@@ -77,6 +77,7 @@ plt.tight_layout(pad=0.5)
 ax.legend(
     (rects1[0], rects2[0], rects3[0], rects4[0]),
     ('Easy-to-learn', 'Hard-to-learn', 'Easy-to-contrast', 'Hard-to-contrast'),
-    loc='lower right')
+    loc='lower right',
+    ncol=2)
 
 plt.savefig(save_file)
