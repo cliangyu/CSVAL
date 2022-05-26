@@ -3,30 +3,21 @@ export CUDA_VISIBLE_DEVICES=0
 
 PORT=${PORT:-29500}
 
-# declare -a StringArray=("path" "blood" "derma")
-# declare -a StringArray=("organa" "path" "blood" "derma")
-declare -a StringArray=("derma")
+declare -a StringArray=("organa" "path" "blood" "derma")
 declare -a METRICS=("easy" "ambiguous" "hard")
 declare -a EPOCH=110
 # declare -a EPOCH=$(seq 5 5 30)
 declare -a TEMPI=("0.05")
-# declare -a TEMPI=("0.2" "0.1" "0.05" "0.01")
-# declare -a K=("100" "200")
 
 for tempi in ${TEMPI[@]}; do
-    # for k in ${K[@]}; do
     for epoch in ${EPOCH[@]}; do
         for dataset in ${StringArray[@]}; do
-            # CONFIG="configs/selfsup/simclr/simclr_resnet50_2xb2048-coslr-200e_${dataset}.py"
             CONFIG="configs/selfsup/mocov2/mocov2_resnet50_1xb4096-coslr-200e_${dataset}.py"
-            # CONFIG="configs/selfsup/mocov2/mocov2_resnet50_1xb4096-coslr-100e_organa_wo_repeat.py"
             echo $CONFIG
-            # WORK_DIR="work_dirs/selfsup/simclr_resnet50_2xb2048-coslr-200e_tempi${tempi}_${dataset}"
-            # WORK_DIR="work_dirs/selfsup/mocov2_resnet50_1xb4096-coslr-100e_organa_wo_repeat"
             WORK_DIR="work_dirs/selfsup/mocov2_resnet50_1xb4096-coslr-200e_${dataset}"
             echo $WORK_DIR
-            # CHECKPOINT="${WORK_DIR}/latest.pth"
-            CHECKPOINT="${WORK_DIR}/epoch_${epoch}.pth"
+            CHECKPOINT="${WORK_DIR}/latest.pth"
+            # CHECKPOINT="${WORK_DIR}/epoch_${epoch}.pth"
             echo $CHECKPOINT
             DATASET_CONFIG="configs/benchmarks/classification/medmnist/${dataset}mnist.py"
             echo $DATASET_CONFIG
@@ -75,5 +66,4 @@ for tempi in ${TEMPI[@]}; do
             done
         done
     done
-    # done
 done

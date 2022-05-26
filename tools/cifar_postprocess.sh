@@ -3,11 +3,9 @@ export CUDA_VISIBLE_DEVICES=1
 
 PORT=${PORT:-29500}
 
-declare -a StringArray=("cifar10")
-# declare -a StringArray=("cifar10lt")
+declare -a StringArray=("cifar10lt")
 declare -a METRICS=("easy" "ambiguous" "hard")
 declare -a EPOCH=110
-# declare -a EPOCH=$(seq 700 100 800)
 declare -a TEMPI=("0.05")
 
 for tempi in ${TEMPI[@]}; do
@@ -66,5 +64,4 @@ for tempi in ${TEMPI[@]}; do
             done
         done
     done
-    # done
 done
