@@ -126,6 +126,10 @@ def main():
     elif dataset_name in ['breastmnist', 'retinamnist']:
         plist = [i for i in range(500, 10000, 500)] + \
             [i for i in range(10000, 100000, 5000)]
+    elif dataset_name in ['cifar10', 'cifar10lt']:
+        plist = [i for i in range(50, 500, 50)] + \
+            [i for i in range(500, 5000, 500)] + \
+            [i for i in range(5000, 50000, 5000)]
 
     num_train = len(dataset)
     zfill = 5
@@ -152,7 +156,9 @@ def main():
                 print(flag, p[pos], num_select, selected_class_ratio)
     elif args.method == 'random':
         # plist = [15, 30]
-        plist = [100, 200]  # blood, organa
+        # plist = [100, 200]  # blood, organa
+        # plist = [100, 150, 200]  # cifar10lt
+        plist = [50, 100, 150, 200, 250, 300, 350]  # cifar10lt
         p = [str(i).zfill(zfill) for i in plist]
         num_select_list = [int(num_train * i / 100000.0) for i in plist]
         # load random .out file

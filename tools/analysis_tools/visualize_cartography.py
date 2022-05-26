@@ -336,7 +336,10 @@ def main():
     dataset_cfg = mmcv.Config.fromfile(args.dataset_config)
     dataset = build_dataset(dataset_cfg.data.extract)
     gt_label_digit = dataset.data_source.get_gt_labels()
-    label_dict = dataset.data_source.info['label']
+    if dataset.data_source.__class__.__name__.endswith('MNIST'):  # medmnist
+        label_dict = dataset.data_source.info['label']
+    else:  # cifar
+        label_dict = dataset.data_source.label_dict
     gt_labels = [label_dict[str(digit)] for digit in gt_label_digit]
 
     if args.work_dir is not None:

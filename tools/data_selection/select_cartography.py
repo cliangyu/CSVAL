@@ -28,7 +28,7 @@ def plot_class_dist(labels,
     plt.rcParams['figure.autolayout'] = True
     my_pal = [
         '#e60049', '#0bb4ff', '#50e991', '#e6d800', '#9b19f5', '#ffa300',
-        '#dc0ab4', '#b3d4ff', '#00bfa0'
+        '#dc0ab4', '#b3d4ff', '#00bfa0', '#fdcce5', '#1a53ff'
     ]
     num_unique_labels = len(labels)
     pal = sns.color_palette(my_pal, n_colors=num_unique_labels)
@@ -158,6 +158,10 @@ def main():
     elif dataset_name in ['breastmnist', 'retinamnist']:
         plist = [i for i in range(500, 10000, 500)] + \
             [i for i in range(10000, 100000, 5000)]
+    elif dataset_name in ['cifar10', 'cifar10lt']:
+        plist = [i for i in range(50, 500, 50)] + \
+            [i for i in range(500, 5000, 500)] + \
+            [i for i in range(5000, 50000, 5000)]
 
     num_train = len(dataset)
     zfill = 5

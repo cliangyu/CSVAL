@@ -132,6 +132,10 @@ def main():
     elif dataset_name in ['breastmnist', 'retinamnist']:
         plist = [i for i in range(500, 10000, 500)] + \
             [i for i in range(10000, 100000, 5000)]
+    elif dataset_name in ['cifar10', 'cifar10lt']:
+        plist = [i for i in range(50, 500, 50)] + \
+            [i for i in range(500, 5000, 500)] + \
+            [i for i in range(5000, 50000, 5000)]
 
     num_train = len(dataset)
     zfill = 5

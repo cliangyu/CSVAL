@@ -39,6 +39,18 @@ class CIFAR10(BaseDataSource):
         'key': 'label_names',
         'md5': '5ff9c542aee3614f3951f8cda6e48888',
     }
+    label_dict = {
+        '0': 'airplane',
+        '1': 'automobile',
+        '2': 'bird',
+        '3': 'cat',
+        '4': 'deer',
+        '5': 'dog',
+        '6': 'frog',
+        '7': 'horse',
+        '8': 'ship',
+        '9': 'truck'
+    }
 
     def load_annotations(self):
 
@@ -129,3 +141,109 @@ class CIFAR100(CIFAR10):
         'key': 'fine_label_names',
         'md5': '7973b15100ade9c7d40fb424638fde48',
     }
+
+
+@DATASOURCES.register_module()
+class CIFAR10LT(CIFAR10):
+    cls_num = 10
+
+    def load_annotations(self):
+
+        rank, world_size = get_dist_info()
+
+        if rank == 0 and not self._check_integrity():
+            download_and_extract_archive(
+                self.url,
+                self.data_prefix,
+                filename=self.filename,
+                md5=self.tgz_md5)
+
+        if world_size > 1:
+            dist.barrier()
+            assert self._check_integrity(), \
+                'Shared storage seems unavailable. ' \
+                f'Please download the dataset manually through {self.url}.'
+
+        if not self.test_mode:
+            downloaded_list = self.train_list
+        else:
+            downloaded_list = self.test_list
+
+        self.imgs = []
+        self.gt_labels = []
+
+        # load the picked numpy arrays
+        for file_name, checksum in downloaded_list:
+            file_path = osp.join(self.data_prefix, self.base_folder, file_name)
+            with open(file_path, 'rb') as f:
+                entry = pickle.load(f, encoding='latin1')
+                self.imgs.append(entry['data'])
+                if 'labels' in entry:
+                    self.gt_labels.extend(entry['labels'])
+                else:
+                    self.gt_labels.extend(entry['fine_labels'])
+
+        self.imgs = np.vstack(self.imgs).reshape(-1, 3, 32, 32)
+        self.imgs = self.imgs.transpose((0, 2, 3, 1))  # convert to HWC
+
+        img_num_list = self.get_img_num_per_cls(
+            cls_num=10, imb_type='exp', imb_factor=0.01)
+        self.gen_imbalanced_data(img_num_list)
+
+        self._load_meta()
+
+        data_infos = []
+        for i, (img, gt_label) in enumerate(zip(self.imgs, self.gt_labels)):
+            gt_label = np.array(gt_label, dtype=np.int64)
+            info = {'img': img, 'gt_label': gt_label, 'idx': i}
+            data_infos.append(info)
+        return data_infos
+
+    def get_img_num_per_cls(
+        self,
+        cls_num=10,
+        imb_type='exp',
+        imb_factor=0.01,
+    ):
+        img_max = len(self.imgs) / cls_num
+        img_num_per_cls = []
+        if imb_type == 'exp':
+            for cls_idx in range(cls_num):
+                num = img_max * (imb_factor**(cls_idx / (cls_num - 1.0)))
+                img_num_per_cls.append(int(num))
+        elif imb_type == 'step':
+            for cls_idx in range(cls_num // 2):
+                img_num_per_cls.append(int(img_max))
+            for cls_idx in range(cls_num // 2):
+                img_num_per_cls.append(int(img_max * imb_factor))
+        else:
+            img_num_per_cls.extend([int(img_max)] * cls_num)
+        return img_num_per_cls
+
+    def gen_imbalanced_data(self, img_num_per_cls):
+        new_data = []
+        new_targets = []
+        targets_np = np.array(self.gt_labels, dtype=np.int64)
+        classes = np.unique(targets_np)
+        # np.random.shuffle(classes)
+        self.num_per_cls_dict = dict()
+        total_selec_idx = []
+        for the_class, the_img_num in zip(classes, img_num_per_cls):
+            self.num_per_cls_dict[the_class] = the_img_num
+            idx = np.where(targets_np == the_class)[0]
+            np.random.shuffle(idx)
+            selec_idx = idx[:the_img_num]
+            total_selec_idx.extend(selec_idx)
+            new_data.append(self.imgs[selec_idx, ...])
+            new_targets.extend([
+                the_class,
+            ] * the_img_num)
+        new_data = np.vstack(new_data)
+        self.imgs = new_data
+        self.gt_labels = new_targets
+
+    def get_cls_num_list(self):
+        cls_num_list = []
+        for i in range(self.cls_num):
+            cls_num_list.append(self.num_per_cls_dict[i])
+        return cls_num_list

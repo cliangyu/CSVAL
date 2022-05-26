@@ -286,7 +286,7 @@ def main():
         plt.figure(figsize=(10, 10))
         my_pal = [
             '#e60049', '#0bb4ff', '#50e991', '#e6d800', '#9b19f5', '#ffa300',
-            '#dc0ab4', '#b3d4ff', '#00bfa0'
+            '#dc0ab4', '#b3d4ff', '#00bfa0', '#fdcce5', '#1a53ff'
         ]
         pal = ListedColormap(
             sns.color_palette(my_pal,
