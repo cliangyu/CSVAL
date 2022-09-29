@@ -1,4 +1,4 @@
-# A Guide to Your First Choice: Addressing Cold Start Problem in Vision Active Learning
+# Cold Start Problem in Vision Active Learning
 
 This repo is developed based on [open-mmlab/mmselfsup](https://github.com/open-mmlab/mmselfsup).
 ## Installlation
