@@ -9,13 +9,13 @@ This repository will provide the official implementation of the following paper:
 <sup>1 </sup>Nanyang Technological University,   <sup>2 </sup>Johns Hopkins University,   <sup>3 </sup>Harvard University <br/>
 arXiv preprint arXiv:2109.12265, 2021 <br/>
 [paper](https://arxiv.org/pdf/2109.12265.pdf) | [code](https://github.com/MrGiovanni/DataAssemble) | [slides](https://d5b3ebbb-7f8d-4011-9114-d87f4a930447.filesusr.com/ugd/deaea1_d6c4a2b816f442209fbce205fc795b5a.pdf)
--->
 
 To reproduce the benchmark results in our paper, please refer to [this repo](https://github.com/MrGiovanni/ColdStart).
+-->
 
 ## Installlation
-This repo is developed based on [open-mmlab/mmselfsup](https://github.com/open-mmlab/mmselfsup).
-Please see [mmselfsup INSTALLATION](https://mmselfsup.readthedocs.io/en/latest/install.html).
+This repo is developed on the basis of [open-mmlab/mmselfsup](https://github.com/open-mmlab/mmselfsup).
+Please see [mmselfsup installation](https://mmselfsup.readthedocs.io/en/latest/install.html).
 
 ## Dataset Preparation
 
