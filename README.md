@@ -50,5 +50,10 @@ bash tools/cifar_postprocess.sh
 ## Citation
 If you find this repo useful, please consider citing our paper:
 ```
-@inproceedings
+@article{chen2022making,
+  title={Making Your First Choice: To Address Cold Start Problem in Vision Active Learning},
+  author={Chen, Liangyu and Bai, Yutong and Huang, Siyu and Lu, Yongyi and Wen, Bihan and Yuille, Alan L and Zhou, Zongwei},
+  journal={arXiv preprint arXiv:2210.02442},
+  year={2022}
+}
 ```
