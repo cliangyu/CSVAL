@@ -13,11 +13,20 @@ This repository provides the official implementation of the following paper:
 <i>NeurIPS 2022 Workshop on Human in the Loop Learning</i> <br/>
 [paper](https://arxiv.org/abs/2210.02442) | [code](https://github.com/c-liangyu/CSVAL)
 
-## Installlation
-This repo is developed on the basis of [open-mmlab/mmselfsup](https://github.com/open-mmlab/mmselfsup).
+If you find this repo useful, please consider citing our paper:
+```
+@article{chen2022making,
+  title={Making Your First Choice: To Address Cold Start Problem in Vision Active Learning},
+  author={Chen, Liangyu and Bai, Yutong and Huang, Siyu and Lu, Yongyi and Wen, Bihan and Yuille, Alan L and Zhou, Zongwei},
+  journal={arXiv preprint arXiv:2210.02442},
+  year={2022}
+}
+```
+## Installation
+The selection part of code is developed on the basis of [open-mmlab/mmselfsup](https://github.com/open-mmlab/mmselfsup).
 Please see [mmselfsup installation](https://mmselfsup.readthedocs.io/en/latest/install.html).
 
-## Dataset Preparation
+## Dataset preparation
 
 All datasets can be auto downloaded in this repo.
 
@@ -56,15 +65,4 @@ cd medmnist_active_selection # for selecting with actively selected initial quer
 # cd medmnist_uniform_active_selection # for selecting with class-balanced actively selected initial queries
 # cd medmnist_uniform_random_selection # for selecting with class-balanced randomly selected initial queries
 for mnist in { bloodmnist breastmnist dermamnist octmnist organamnist organcmnist organsmnist pathmnist pneumoniamnist retinamnist tissuemnist }; do bash run.sh $mnist; done
-```
-
-## Citation
-If you find this repo useful, please consider citing our paper:
-```
-@article{chen2022making,
-  title={Making Your First Choice: To Address Cold Start Problem in Vision Active Learning},
-  author={Chen, Liangyu and Bai, Yutong and Huang, Siyu and Lu, Yongyi and Wen, Bihan and Yuille, Alan L and Zhou, Zongwei},
-  journal={arXiv preprint arXiv:2210.02442},
-  year={2022}
-}
 ```
