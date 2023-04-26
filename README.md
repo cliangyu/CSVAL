@@ -14,7 +14,7 @@ This repository provides the official implementation of the following paper:
 <i>NeurIPS Workshop on Human in the Loop Learning, 2022</i> <br/>
 [paper](https://arxiv.org/abs/2210.02442) | [code](https://github.com/c-liangyu/CSVAL) | [poster](https://nips.cc/media/PosterPDFs/NeurIPS%202022/64383.png?t=1669951743.448019)
 
-![visitors](https://visitor-badge.glitch.me/badge?page_id=liangyuch/CSVAL&right_color=red)
+![visitors](https://visitor-badge.glitch.me/badge?page_id=cliangyu/CSVAL&right_color=red)
 
 If you find this repo useful, please consider citing our paper:
 ```
