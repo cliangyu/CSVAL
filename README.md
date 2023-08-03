@@ -14,8 +14,6 @@ This repository provides the official implementation of the following paper:
 <i>NeurIPS Workshop on Human in the Loop Learning, 2022</i> <br/>
 [paper](https://arxiv.org/abs/2210.02442) | [code](https://github.com/c-liangyu/CSVAL) | [poster](https://nips.cc/media/PosterPDFs/NeurIPS%202022/64383.png?t=1669951743.448019)
 
-![visitors](https://visitor-badge.glitch.me/badge?page_id=cliangyu/CSVAL&right_color=red)
-
 If you find this repo useful, please consider citing our paper:
 ```
 @article{chen2022making,
@@ -38,6 +36,9 @@ MedMNIST can also be downloaded at [MedMNIST v2](https://medmnist.com/).
 CIFAR-10-LT is generated in this repo with a fixed seed.
 
 ## Pretrain
+
+⚠️ Note: the current implementation is based on MMSelfSup which is not maintained. I updated the new version of pretraining and selection code in [v2](https://github.com/cliangyu/CSVALv2), based on MMPreTrain. However, this repository is reserved as a minimal and compatible implementation : )
+
 Pretrain on all MedMNIST datasets
 ```shell
 cd selection
